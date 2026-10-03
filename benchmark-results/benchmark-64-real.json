@@ -1,0 +1,49 @@
+{
+  "benchmark": "浪潮模式 real GPT route 64-agent concurrency smoke test",
+  "workload": "Wave 1 Scout; fixed evidence extraction; strict JSON envelope; no tools",
+  "snapshot": {
+    "status": "historical",
+    "recorded_at_utc": null,
+    "timestamp_note": "原始实测未记录 UTC 时间戳；文件修改时间不代表测试时间。",
+    "environment_context": "DSH workflow.parallel；精确 DSH profile、运行时版本和 provider 配额快照未保存。"
+  },
+  "runs": [
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6.1-sol",
+      "requested_reasoning": "low",
+      "requested_concurrency": 64,
+      "submitted": 64,
+      "returned": 37,
+      "valid_envelopes": 37,
+      "failed_or_invalid": 27
+    },
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6-astra",
+      "requested_reasoning": "minimal",
+      "requested_concurrency": 64,
+      "submitted": 64,
+      "returned": 37,
+      "valid_envelopes": 37,
+      "failed_or_invalid": 27
+    },
+    {
+      "provider": "openai-codex",
+      "model": "gpt-6-astra",
+      "requested_reasoning": "minimal",
+      "requested_concurrency": 32,
+      "submitted": 32,
+      "returned": 28,
+      "valid_envelopes": 28,
+      "failed_or_invalid": 4
+    }
+  ],
+  "interpretation": "The DSH workflow parallel fan-out accepted 37 of 64 requested calls in both 64-way runs; a 32-way check returned 28. This establishes real-route concurrency pressure, not a proof of a stable provider quota.",
+  "limitations": [
+    "The workflow result exposes returned/valid counts but not per-agent wall-clock or provider billing data.",
+    "The calls used a fixed synthetic evidence task and did not measure scientific answer quality.",
+    "The run exercised the actual DSH workflow/model route with 浪潮模式 constraints, but did not call the local SQLite DAGScheduler adapter.",
+    "Requested reasoning level is recorded from the route prompt/config; the workflow hook exposes provider/model override but no separate numeric reasoning parameter."
+  ]
+}

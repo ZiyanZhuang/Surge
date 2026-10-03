@@ -1,0 +1,116 @@
+{
+  "benchmark": "浪潮模式 reasoning-route and staggered 64-agent test",
+  "provider": "openai-codex",
+  "task": "Wave 1 Scout fixed evidence extraction with strict JSON envelope",
+  "snapshot": {
+    "status": "historical",
+    "recorded_at_utc": null,
+    "timestamp_note": "原始实测未记录 UTC 时间戳；文件修改时间不代表测试时间。",
+    "environment_context": "DSH workflow.parallel；精确 DSH profile、运行时版本和 provider 配额快照未保存。"
+  },
+  "reasoning_note": "The workflow hook exposes provider/model override but no separate numeric reasoning parameter; medium/high/minimal were included in route instructions and recorded as requested effort.",
+  "route_matrix": [
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "submitted": 8,
+      "returned": 8,
+      "valid": 8,
+      "failed_or_invalid": 0
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "submitted": 8,
+      "returned": 8,
+      "valid": 8,
+      "failed_or_invalid": 0
+    },
+    {
+      "model": "gpt-6-astra",
+      "effort": "medium",
+      "submitted": 8,
+      "returned": 7,
+      "valid": 7,
+      "failed_or_invalid": 1
+    },
+    {
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "submitted": 8,
+      "returned": 8,
+      "valid": 8,
+      "failed_or_invalid": 0
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "effort": "medium",
+      "submitted": 8,
+      "returned": 7,
+      "valid": 7,
+      "failed_or_invalid": 1
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "effort": "high",
+      "submitted": 8,
+      "returned": 6,
+      "valid": 6,
+      "failed_or_invalid": 2
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "effort": "medium",
+      "submitted": 8,
+      "returned": 6,
+      "valid": 6,
+      "failed_or_invalid": 2
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "effort": "high",
+      "submitted": 8,
+      "returned": 3,
+      "valid": 3,
+      "failed_or_invalid": 5
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "effort": "medium",
+      "submitted": 8,
+      "returned": 6,
+      "valid": 6,
+      "failed_or_invalid": 2
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "effort": "high",
+      "submitted": 8,
+      "returned": 4,
+      "valid": 4,
+      "failed_or_invalid": 4
+    }
+  ],
+  "selected_route": {
+    "model": "gpt-6.1-sol",
+    "effort": "medium",
+    "sample_valid_rate": 1.0
+  },
+  "staggered_8x8": {
+    "strategy": "8 sequential batches x 8 agents",
+    "submitted": 64,
+    "returned": 54,
+    "valid": 54,
+    "failed_or_invalid": 10
+  },
+  "staggered_16x4": {
+    "strategy": "16 sequential batches x 4 agents",
+    "model": "gpt-6.1-sol",
+    "effort": "medium",
+    "submitted": 64,
+    "returned": 61,
+    "valid": 61,
+    "failed_or_invalid": 3
+  },
+  "conclusion": "Compared with the previous 64-way fan-out result of 37/64, sequential staggering improved valid returns to 54/64 with batches of 8 and 61/64 with batches of 4. It did not produce a guaranteed 64/64 result."
+}

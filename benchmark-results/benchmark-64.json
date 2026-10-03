@@ -1,0 +1,48 @@
+{
+  "benchmark": "浪潮模式 64-agent local concurrency benchmark",
+  "methodology": "Single-run synthetic local scheduler measurement; not a statistical sample and not an LLM quality or remote inference benchmark.",
+  "environment": {
+    "python": "3.13.3",
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "runs": [
+    {
+      "scenario": "fanout64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 64,
+      "wall_seconds": 0.722331,
+      "throughput_agents_per_second": 88.602,
+      "latency_seconds": {
+        "median": 0.101225,
+        "p95": 0.157828
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark."
+    },
+    {
+      "scenario": "waves64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 32,
+      "wall_seconds": 0.811839,
+      "throughput_agents_per_second": 78.833,
+      "latency_seconds": {
+        "median": 0.045875,
+        "p95": 0.089095
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark."
+    }
+  ]
+}

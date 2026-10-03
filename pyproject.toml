@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dsh-surge-mode"
+version = "0.1.0"
+description = "Single-host bounded-concurrency scientific Agent DAG scheduler"
+readme = "README.zh-CN.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "DSH Surge Mode contributors"}]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "build==1.2.2",
+]
+
+[project.scripts]
+dsh-surge-benchmark = "benchmark_64:main"
+dsh-surge-real-smoke = "benchmark_real_smoke:main"
+dsh-surge-select-finqa = "select_finqa_fixture:main"
+dsh-surge-real-adapter-smoke = "benchmark_real_adapter_smoke:main"
+
+[tool.setuptools]
+packages = ["surge_cluster"]
+py-modules = ["benchmark_64", "benchmark_real_smoke", "benchmark_real_adapter_smoke", "select_finqa_fixture"]
+
+[tool.setuptools.data-files]
+"." = ["README.md", "README.zh-CN.md", "DESIGN.zh-CN.md", "BENCHMARKS.zh-CN.md", "SMOKE-TEST-PLAN.zh-CN.md", "PHILOSOPHY.md", "PHILOSOPHY.zh-CN.md", "CONTRIBUTING.zh-CN.md", "THIRD_PARTY_NOTICES.md", "preset-langchao.patch.yml", "LICENSE"]
+"docs" = ["docs/QUICKSTART.zh-CN.md", "docs/ADAPTER-CONTRACT.zh-CN.md"]
+"tests" = ["tests/test_core.py", "tests/test_finqa.py", "tests/test_real_smoke.py", "tests/test_select_finqa.py", "tests/test_real_adapter_smoke.py", "tests/test_release_hygiene.py"]
+"tests/fixtures/finqa" = ["tests/fixtures/finqa/smoke.jsonl", "tests/fixtures/finqa/MANIFEST.json", "tests/fixtures/finqa/README.md"]
+"benchmark-results" = [
+    "benchmark-results/benchmark-64.json",
+    "benchmark-results/benchmark-64-after-demand.json",
+    "benchmark-results/benchmark-64-real.json",
+    "benchmark-results/benchmark-reasoning-staggered.json",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,94 @@
+{
+  "benchmark": "FinQA real model-adapter smoke",
+  "mode": "authorized real adapter; one case; not a capacity benchmark",
+  "adapter": {
+    "url": "http://127.0.0.1:17800/v1/messages",
+    "model": "gpt-6.1-sol",
+    "transport": "Anthropic Messages SSE -> local Codex relay",
+    "request_max_tokens": 2000,
+    "timeout_seconds": 120.0
+  },
+  "fixture": "tests\\fixtures\\finqa\\smoke.jsonl",
+  "fixture_sha256": "be4edcba1445dc75cb07bc06550837107db4b1a3785774b40736a75e45848253",
+  "manifest": {
+    "source_url": "https://github.com/czyssrs/FinQA",
+    "revision": "0f16e2867befa6840783e58be38c9efb9229d742",
+    "split": "dev",
+    "fixture_sha256": "be4edcba1445dc75cb07bc06550837107db4b1a3785774b40736a75e45848253",
+    "record_ids": [
+      "V/2008/page_17.pdf-1",
+      "C/2017/page_328.pdf-1",
+      "DVN/2007/page_58.pdf-2"
+    ],
+    "source_sha256": "a847fb7e0d61a3125a1e2909852df6b89f1ee64d2c5ff1bf689e332214deee51",
+    "source_filename": "dev.json"
+  },
+  "case": {
+    "id": "C/2017/page_328.pdf-1",
+    "question": "what was the percentage cumulative total return for the five year period ended 31-dec-2017 of citi common stock?",
+    "program": "subtract(193.5, const_100), divide(#0, const_100)",
+    "oracle": {
+      "ok": true,
+      "exe_ans_ok": true,
+      "expected_exe_ans": "0.935",
+      "exe_ans_tolerance": "0.000005",
+      "answer": {
+        "ok": true,
+        "normalized_gold": "0.935",
+        "tolerance": "0.0005",
+        "percent_mode": "ratio"
+      }
+    },
+    "oracle_trace": [
+      {
+        "operation": "subtract",
+        "operands": [
+          "193.5",
+          "100"
+        ],
+        "result": "93.5"
+      },
+      {
+        "operation": "divide",
+        "operands": [
+          "93.5",
+          "100"
+        ],
+        "result": "0.935"
+      }
+    ],
+    "prompt_sha256": "39f2e2b0c7c4ee3a0c8f38a1088983c53b8b2676537f70dcdc1c3c666cbbef36",
+    "response": {
+      "http_status": 200,
+      "content_type": "text/event-stream; charset=utf-8",
+      "events": [
+        "message_start",
+        "content_block_start",
+        "content_block_delta",
+        "content_block_stop",
+        "message_delta",
+        "message_stop"
+      ],
+      "text": "{\"answer\":\"93.5%\"}",
+      "usage": {
+        "input_tokens": 243,
+        "output_tokens": 75
+      },
+      "request_max_tokens": 2000
+    },
+    "model_answer": "93.5%",
+    "answer_check": {
+      "ok": true,
+      "normalized_gold": "93.5",
+      "tolerance": "0.05",
+      "percent_mode": "direct"
+    },
+    "output_budget_ok": true,
+    "passed": true
+  },
+  "limitations": [
+    "This calls the authorized local reverse-proxy adapter, not the Host llm business Service directly.",
+    "One case only; no throughput or model-capability claim.",
+    "The offline scheduler Gate A remains the authoritative orchestration evidence."
+  ]
+}

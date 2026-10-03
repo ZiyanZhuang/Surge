@@ -1,0 +1,1051 @@
+{
+  "benchmark": "FinQA local replay smoke",
+  "mode": "offline replay; no model call",
+  "generator": {
+    "script": "benchmark_real_smoke.py",
+    "oracle": "surge_cluster.finqa.execute_program",
+    "node_ids": [
+      "scout-text",
+      "scout-table",
+      "deepen",
+      "verify-calc",
+      "verify-evidence",
+      "synthesize"
+    ],
+    "schema_version": 2
+  },
+  "fixture": "tests\\fixtures\\finqa\\smoke.jsonl",
+  "fixture_sha256": "be4edcba1445dc75cb07bc06550837107db4b1a3785774b40736a75e45848253",
+  "manifest": {
+    "source_url": "https://github.com/czyssrs/FinQA",
+    "revision": "0f16e2867befa6840783e58be38c9efb9229d742",
+    "split": "dev",
+    "fixture_sha256": "be4edcba1445dc75cb07bc06550837107db4b1a3785774b40736a75e45848253",
+    "record_ids": [
+      "V/2008/page_17.pdf-1",
+      "C/2017/page_328.pdf-1",
+      "DVN/2007/page_58.pdf-2"
+    ],
+    "source_sha256": "a847fb7e0d61a3125a1e2909852df6b89f1ee64d2c5ff1bf689e332214deee51",
+    "source_filename": "dev.json"
+  },
+  "summary": {
+    "case_count": 3,
+    "passed_count": 3,
+    "all_passed": true
+  },
+  "cases": [
+    {
+      "passed": true,
+      "status_ok": true,
+      "wave_gate_order_ok": true,
+      "answer_match": true,
+      "expected_answer": "127.40",
+      "replayed_answer": "127.40",
+      "snapshot": [
+        {
+          "id": "scout-table",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-0",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "scout-text",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-0",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "deepen",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-1",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "verify-calc",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-2",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "verify-evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-2",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "synthesize",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-3",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        }
+      ],
+      "events": [
+        {
+          "id": 1,
+          "node_id": null,
+          "event": "run.created",
+          "detail": "nodes=6"
+        },
+        {
+          "id": 2,
+          "node_id": "scout-table",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 3,
+          "node_id": "scout-table",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-0"
+        },
+        {
+          "id": 4,
+          "node_id": "scout-text",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 5,
+          "node_id": "scout-text",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-0"
+        },
+        {
+          "id": 6,
+          "node_id": "scout-text",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 7,
+          "node_id": "scout-text",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 8,
+          "node_id": "scout-table",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 9,
+          "node_id": "scout-table",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 10,
+          "node_id": "deepen",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 11,
+          "node_id": "deepen",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-1"
+        },
+        {
+          "id": 12,
+          "node_id": "deepen",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 13,
+          "node_id": "deepen",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 14,
+          "node_id": "verify-calc",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 15,
+          "node_id": "verify-calc",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-2"
+        },
+        {
+          "id": 16,
+          "node_id": "verify-evidence",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 17,
+          "node_id": "verify-evidence",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-2"
+        },
+        {
+          "id": 18,
+          "node_id": "verify-calc",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 19,
+          "node_id": "verify-calc",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 20,
+          "node_id": "verify-evidence",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 21,
+          "node_id": "verify-evidence",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 22,
+          "node_id": "synthesize",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 23,
+          "node_id": "synthesize",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-3"
+        },
+        {
+          "id": 24,
+          "node_id": "synthesize",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 25,
+          "node_id": "synthesize",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 26,
+          "node_id": null,
+          "event": "run.completed",
+          "detail": "succeeded"
+        }
+      ],
+      "id": "V/2008/page_17.pdf-1",
+      "run_id": "finqa-001",
+      "result_status": "succeeded",
+      "succeeded": [
+        "deepen",
+        "scout-table",
+        "scout-text",
+        "synthesize",
+        "verify-calc",
+        "verify-evidence"
+      ],
+      "failed": [],
+      "blocked": [],
+      "artifacts": [
+        {
+          "node_id": "deepen",
+          "name": "program",
+          "ref": "artifact:aafff7bc155e22aafa7b199cec5a326fe3e93874e0aedcbf2c250501e16be4d7",
+          "sha256": "aafff7bc155e22aafa7b199cec5a326fe3e93874e0aedcbf2c250501e16be4d7"
+        },
+        {
+          "node_id": "scout-table",
+          "name": "table-evidence",
+          "ref": "artifact:d3fca09380238ef9d9728d4f0ae1a61acbd68bce03b931820b8bdf38b0162cfa",
+          "sha256": "d3fca09380238ef9d9728d4f0ae1a61acbd68bce03b931820b8bdf38b0162cfa"
+        },
+        {
+          "node_id": "scout-text",
+          "name": "text-evidence",
+          "ref": "artifact:e04cd1920068b6a46011b4af147a9cf610a37a524038fde786054de96bbaf620",
+          "sha256": "e04cd1920068b6a46011b4af147a9cf610a37a524038fde786054de96bbaf620"
+        },
+        {
+          "node_id": "synthesize",
+          "name": "final-answer",
+          "ref": "artifact:1c2981f297831166c95c8e69c9fe0044578fe01eb019a53ca4534a22c8c78eb0",
+          "sha256": "1c2981f297831166c95c8e69c9fe0044578fe01eb019a53ca4534a22c8c78eb0"
+        },
+        {
+          "node_id": "verify-calc",
+          "name": "calculation-check",
+          "ref": "artifact:3303228acd9d69335b6694dec489ca9ea363a1f522011f70bd3f201e19db20ad",
+          "sha256": "3303228acd9d69335b6694dec489ca9ea363a1f522011f70bd3f201e19db20ad"
+        },
+        {
+          "node_id": "verify-evidence",
+          "name": "evidence-check",
+          "ref": "artifact:8c5aac952724dced97bfdbbbe5b22296a7b9ed4dc0023e934cfd613fce38499d",
+          "sha256": "8c5aac952724dced97bfdbbbe5b22296a7b9ed4dc0023e934cfd613fce38499d"
+        }
+      ],
+      "artifact_count": 6,
+      "budget": {
+        "status": "succeeded",
+        "budget_cost": 1.0,
+        "reserved_cost": 0.0,
+        "spent_cost": 0.0
+      },
+      "calls": [
+        "scout-table",
+        "scout-text",
+        "deepen",
+        "verify-calc",
+        "verify-evidence",
+        "synthesize"
+      ],
+      "oracle": {
+        "trace": {
+          "program": "divide(637, const_5)",
+          "value": "127.4",
+          "trace": [
+            {
+              "operation": "divide",
+              "operands": [
+                "637",
+                "5"
+              ],
+              "result": "127.4"
+            }
+          ]
+        },
+        "check": {
+          "ok": true,
+          "exe_ans_ok": true,
+          "expected_exe_ans": "127.4",
+          "exe_ans_tolerance": "0.000005",
+          "answer": {
+            "ok": true,
+            "normalized_gold": "127.40",
+            "tolerance": "0.005",
+            "percent_mode": "direct"
+          }
+        }
+      },
+      "oracle_error": null,
+      "db": "smoke-runs\\finqa-001\\run.sqlite3",
+      "oracle_ok": true,
+      "budget_invariant_ok": true
+    },
+    {
+      "passed": true,
+      "status_ok": true,
+      "wave_gate_order_ok": true,
+      "answer_match": true,
+      "expected_answer": "93.5%",
+      "replayed_answer": "93.5%",
+      "snapshot": [
+        {
+          "id": "scout-table",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-0",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "scout-text",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-0",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "deepen",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-1",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "verify-calc",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-2",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "verify-evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-2",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "synthesize",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-3",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        }
+      ],
+      "events": [
+        {
+          "id": 1,
+          "node_id": null,
+          "event": "run.created",
+          "detail": "nodes=6"
+        },
+        {
+          "id": 2,
+          "node_id": "scout-table",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 3,
+          "node_id": "scout-table",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-0"
+        },
+        {
+          "id": 4,
+          "node_id": "scout-text",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 5,
+          "node_id": "scout-text",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-0"
+        },
+        {
+          "id": 6,
+          "node_id": "scout-table",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 7,
+          "node_id": "scout-table",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 8,
+          "node_id": "scout-text",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 9,
+          "node_id": "scout-text",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 10,
+          "node_id": "deepen",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 11,
+          "node_id": "deepen",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-1"
+        },
+        {
+          "id": 12,
+          "node_id": "deepen",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 13,
+          "node_id": "deepen",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 14,
+          "node_id": "verify-calc",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 15,
+          "node_id": "verify-calc",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-2"
+        },
+        {
+          "id": 16,
+          "node_id": "verify-evidence",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 17,
+          "node_id": "verify-evidence",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-2"
+        },
+        {
+          "id": 18,
+          "node_id": "verify-evidence",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 19,
+          "node_id": "verify-evidence",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 20,
+          "node_id": "verify-calc",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 21,
+          "node_id": "verify-calc",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 22,
+          "node_id": "synthesize",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 23,
+          "node_id": "synthesize",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-3"
+        },
+        {
+          "id": 24,
+          "node_id": "synthesize",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 25,
+          "node_id": "synthesize",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 26,
+          "node_id": null,
+          "event": "run.completed",
+          "detail": "succeeded"
+        }
+      ],
+      "id": "C/2017/page_328.pdf-1",
+      "run_id": "finqa-002",
+      "result_status": "succeeded",
+      "succeeded": [
+        "deepen",
+        "scout-table",
+        "scout-text",
+        "synthesize",
+        "verify-calc",
+        "verify-evidence"
+      ],
+      "failed": [],
+      "blocked": [],
+      "artifacts": [
+        {
+          "node_id": "deepen",
+          "name": "program",
+          "ref": "artifact:6af7b85f478a9aa457dc84ad19b30d2f06eb61b62f668986646b9171f07051e6",
+          "sha256": "6af7b85f478a9aa457dc84ad19b30d2f06eb61b62f668986646b9171f07051e6"
+        },
+        {
+          "node_id": "scout-table",
+          "name": "table-evidence",
+          "ref": "artifact:ef67636cedf88b4a5ffdeaf4f75650cd230854638afe661981914580c9cd02c8",
+          "sha256": "ef67636cedf88b4a5ffdeaf4f75650cd230854638afe661981914580c9cd02c8"
+        },
+        {
+          "node_id": "scout-text",
+          "name": "text-evidence",
+          "ref": "artifact:ab36bde3b7c211bca42f8db239b25765223bae95ea1edc0a1c3c0e7761bc99f2",
+          "sha256": "ab36bde3b7c211bca42f8db239b25765223bae95ea1edc0a1c3c0e7761bc99f2"
+        },
+        {
+          "node_id": "synthesize",
+          "name": "final-answer",
+          "ref": "artifact:c7ea7ade999f692321267ebaf9099559662bf5f06e67b961ab3995491c4d9364",
+          "sha256": "c7ea7ade999f692321267ebaf9099559662bf5f06e67b961ab3995491c4d9364"
+        },
+        {
+          "node_id": "verify-calc",
+          "name": "calculation-check",
+          "ref": "artifact:00608946f236bc8bae86304d7a9e9ed54de3d0baaf19116c76246b2dd4fc1701",
+          "sha256": "00608946f236bc8bae86304d7a9e9ed54de3d0baaf19116c76246b2dd4fc1701"
+        },
+        {
+          "node_id": "verify-evidence",
+          "name": "evidence-check",
+          "ref": "artifact:489a7c7fa1c3e6f938bb98f5690eaa8670727058dde4da42dae646e462b1e649",
+          "sha256": "489a7c7fa1c3e6f938bb98f5690eaa8670727058dde4da42dae646e462b1e649"
+        }
+      ],
+      "artifact_count": 6,
+      "budget": {
+        "status": "succeeded",
+        "budget_cost": 1.0,
+        "reserved_cost": 0.0,
+        "spent_cost": 0.0
+      },
+      "calls": [
+        "scout-table",
+        "scout-text",
+        "deepen",
+        "verify-calc",
+        "verify-evidence",
+        "synthesize"
+      ],
+      "oracle": {
+        "trace": {
+          "program": "subtract(193.5, const_100), divide(#0, const_100)",
+          "value": "0.935",
+          "trace": [
+            {
+              "operation": "subtract",
+              "operands": [
+                "193.5",
+                "100"
+              ],
+              "result": "93.5"
+            },
+            {
+              "operation": "divide",
+              "operands": [
+                "93.5",
+                "100"
+              ],
+              "result": "0.935"
+            }
+          ]
+        },
+        "check": {
+          "ok": true,
+          "exe_ans_ok": true,
+          "expected_exe_ans": "0.935",
+          "exe_ans_tolerance": "0.000005",
+          "answer": {
+            "ok": true,
+            "normalized_gold": "0.935",
+            "tolerance": "0.0005",
+            "percent_mode": "ratio"
+          }
+        }
+      },
+      "oracle_error": null,
+      "db": "smoke-runs\\finqa-002\\run.sqlite3",
+      "oracle_ok": true,
+      "budget_invariant_ok": true
+    },
+    {
+      "passed": true,
+      "status_ok": true,
+      "wave_gate_order_ok": true,
+      "answer_match": true,
+      "expected_answer": "24.69%",
+      "replayed_answer": "24.69%",
+      "snapshot": [
+        {
+          "id": "scout-table",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-0",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "scout-text",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-0",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "deepen",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-1",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "verify-calc",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-2",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "verify-evidence",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-2",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        },
+        {
+          "id": "synthesize",
+          "status": "succeeded",
+          "attempt_count": 1,
+          "error": null,
+          "stage": "wave-3",
+          "incremental_value": 1.0,
+          "urgency": 0.0,
+          "route_class": "default",
+          "progress": 1.0
+        }
+      ],
+      "events": [
+        {
+          "id": 1,
+          "node_id": null,
+          "event": "run.created",
+          "detail": "nodes=6"
+        },
+        {
+          "id": 2,
+          "node_id": "scout-table",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 3,
+          "node_id": "scout-table",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-0"
+        },
+        {
+          "id": 4,
+          "node_id": "scout-text",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 5,
+          "node_id": "scout-text",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-0"
+        },
+        {
+          "id": 6,
+          "node_id": "scout-table",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 7,
+          "node_id": "scout-table",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 8,
+          "node_id": "scout-text",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 9,
+          "node_id": "scout-text",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 10,
+          "node_id": "deepen",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 11,
+          "node_id": "deepen",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-1"
+        },
+        {
+          "id": 12,
+          "node_id": "deepen",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 13,
+          "node_id": "deepen",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 14,
+          "node_id": "verify-calc",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 15,
+          "node_id": "verify-calc",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-2"
+        },
+        {
+          "id": 16,
+          "node_id": "verify-evidence",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 17,
+          "node_id": "verify-evidence",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-2"
+        },
+        {
+          "id": 18,
+          "node_id": "verify-evidence",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 19,
+          "node_id": "verify-evidence",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 20,
+          "node_id": "verify-calc",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 21,
+          "node_id": "verify-calc",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 22,
+          "node_id": "synthesize",
+          "event": "task.routed",
+          "detail": "default run rate"
+        },
+        {
+          "id": 23,
+          "node_id": "synthesize",
+          "event": "task.started",
+          "detail": "attempt=1;stage=wave-3"
+        },
+        {
+          "id": 24,
+          "node_id": "synthesize",
+          "event": "validation.completed",
+          "detail": "score=1.00"
+        },
+        {
+          "id": 25,
+          "node_id": "synthesize",
+          "event": "task.completed",
+          "detail": null
+        },
+        {
+          "id": 26,
+          "node_id": null,
+          "event": "run.completed",
+          "detail": "succeeded"
+        }
+      ],
+      "id": "DVN/2007/page_58.pdf-2",
+      "run_id": "finqa-003",
+      "result_status": "succeeded",
+      "succeeded": [
+        "deepen",
+        "scout-table",
+        "scout-text",
+        "synthesize",
+        "verify-calc",
+        "verify-evidence"
+      ],
+      "failed": [],
+      "blocked": [],
+      "artifacts": [
+        {
+          "node_id": "deepen",
+          "name": "program",
+          "ref": "artifact:30f8d7bdb31077c1a77784c2271bfbf71be3600cfb82f8819a12935f069e0ea2",
+          "sha256": "30f8d7bdb31077c1a77784c2271bfbf71be3600cfb82f8819a12935f069e0ea2"
+        },
+        {
+          "node_id": "scout-table",
+          "name": "table-evidence",
+          "ref": "artifact:14ed67c78ed78e9038fce820a3e439d7b59d5f69414dd50bdc2a0b8c5b3c6045",
+          "sha256": "14ed67c78ed78e9038fce820a3e439d7b59d5f69414dd50bdc2a0b8c5b3c6045"
+        },
+        {
+          "node_id": "scout-text",
+          "name": "text-evidence",
+          "ref": "artifact:0ecde09a78f1ba7179a84c84b1a6c641c6eb1972de5d1983eec140fdb270f3b7",
+          "sha256": "0ecde09a78f1ba7179a84c84b1a6c641c6eb1972de5d1983eec140fdb270f3b7"
+        },
+        {
+          "node_id": "synthesize",
+          "name": "final-answer",
+          "ref": "artifact:35341b0cc8c41255bf3f45640e6620ef741e7cc7f076737fd8f074af0349edc7",
+          "sha256": "35341b0cc8c41255bf3f45640e6620ef741e7cc7f076737fd8f074af0349edc7"
+        },
+        {
+          "node_id": "verify-calc",
+          "name": "calculation-check",
+          "ref": "artifact:075df0944cba0927f153aac3a2027d9b4b17dde2c9114b7cb1cf9ad6db143951",
+          "sha256": "075df0944cba0927f153aac3a2027d9b4b17dde2c9114b7cb1cf9ad6db143951"
+        },
+        {
+          "node_id": "verify-evidence",
+          "name": "evidence-check",
+          "ref": "artifact:64d251190ab7f0e737f951dcd9fe0a3a7f78a39958e7b93ce0c58c609eb961c7",
+          "sha256": "64d251190ab7f0e737f951dcd9fe0a3a7f78a39958e7b93ce0c58c609eb961c7"
+        }
+      ],
+      "artifact_count": 6,
+      "budget": {
+        "status": "succeeded",
+        "budget_cost": 1.0,
+        "reserved_cost": 0.0,
+        "spent_cost": 0.0
+      },
+      "calls": [
+        "scout-table",
+        "scout-text",
+        "deepen",
+        "verify-calc",
+        "verify-evidence",
+        "synthesize"
+      ],
+      "oracle": {
+        "trace": {
+          "program": "divide(60, 243), multiply(#0, const_100)",
+          "value": "24.69135802469135802469135802469135802469",
+          "trace": [
+            {
+              "operation": "divide",
+              "operands": [
+                "60",
+                "243"
+              ],
+              "result": "0.2469135802469135802469135802469135802469"
+            },
+            {
+              "operation": "multiply",
+              "operands": [
+                "0.2469135802469135802469135802469135802469",
+                "100"
+              ],
+              "result": "24.69135802469135802469135802469135802469"
+            }
+          ]
+        },
+        "check": {
+          "ok": true,
+          "exe_ans_ok": true,
+          "expected_exe_ans": "24.69136",
+          "exe_ans_tolerance": "0.000005",
+          "answer": {
+            "ok": true,
+            "normalized_gold": "24.69",
+            "tolerance": "0.005",
+            "percent_mode": "direct"
+          }
+        }
+      },
+      "oracle_error": null,
+      "db": "smoke-runs\\finqa-003\\run.sqlite3",
+      "oracle_ok": true,
+      "budget_invariant_ok": true
+    }
+  ]
+}

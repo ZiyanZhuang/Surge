@@ -1,0 +1,16 @@
+{
+  "source_url": "https://github.com/czyssrs/FinQA",
+  "revision": "0f16e2867befa6840783e58be38c9efb9229d742",
+  "split": "dev",
+  "fixture_sha256": "be4edcba1445dc75cb07bc06550837107db4b1a3785774b40736a75e45848253",
+  "record_ids": [
+    "V/2008/page_17.pdf-1",
+    "C/2017/page_328.pdf-1",
+    "DVN/2007/page_58.pdf-2"
+  ],
+  "source_sha256": "a847fb7e0d61a3125a1e2909852df6b89f1ee64d2c5ff1bf689e332214deee51",
+  "source_filename": "dev.json",
+  "license_status": "upstream-license-not-identified",
+  "attribution": "Chen et al., FinQA: A Dataset of Numerical Reasoning over Financial Data, EMNLP 2021",
+  "redistribution_note": "Test fixture only; confirm upstream dataset and source-document terms before redistribution."
+}

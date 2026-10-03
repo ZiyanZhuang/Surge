@@ -1,0 +1,44 @@
+{
+  "benchmark": "浪潮模式 64-agent local concurrency benchmark",
+  "methodology": "Concurrency/latency/throughput/failure/cost metrics inspired by open-source agentic benchmark practice.",
+  "runs": [
+    {
+      "scenario": "fanout64",
+      "agents": 64,
+      "configured_workers": 8,
+      "synthetic_delay_seconds": 0.005,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 8,
+      "wall_seconds": 1.651316,
+      "throughput_agents_per_second": 38.757,
+      "latency_seconds": {
+        "median": 0.057453,
+        "p95": 0.110585
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark."
+    },
+    {
+      "scenario": "waves64",
+      "agents": 64,
+      "configured_workers": 8,
+      "synthetic_delay_seconds": 0.005,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 8,
+      "wall_seconds": 1.894647,
+      "throughput_agents_per_second": 33.779,
+      "latency_seconds": {
+        "median": 0.092507,
+        "p95": 0.140607
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark."
+    }
+  ]
+}
