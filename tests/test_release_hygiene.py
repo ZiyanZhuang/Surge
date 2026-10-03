@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -49,6 +50,15 @@ class ReleaseHygieneTests(unittest.TestCase):
                 continue
             self.assertNotIn(path.name, forbidden_names, path)
             self.assertNotIn(path.suffix.lower(), forbidden_suffixes, path)
+
+    def test_text_does_not_contain_user_specific_absolute_paths(self):
+        user_path = re.compile(r"(?i)(?:[A-Z]:\\(?:Users|Documents and Settings)\\[^\r\n]+|/(?:home|Users)/[^/\s]+(?:/|$))")
+        text_suffixes = {".md", ".py", ".json", ".jsonl", ".toml", ".yml", ".yaml", ".txt"}
+        for path in ROOT.rglob("*"):
+            if not path.is_file() or ".git" in path.parts or path.suffix.lower() not in text_suffixes:
+                continue
+            text = path.read_text(encoding="utf-8")
+            self.assertIsNone(user_path.search(text), path)
 
 
 if __name__ == "__main__":

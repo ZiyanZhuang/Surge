@@ -41,7 +41,7 @@ tests/fixtures/finqa/MANIFEST.json
 
 ```powershell
 python select_finqa_fixture.py `
-  --input C:\data\FinQA\dataset\dev.json `
+  --input .\data\FinQA\dataset\dev.json `
   --output tests\fixtures\finqa\smoke.jsonl `
   --manifest tests\fixtures\finqa\MANIFEST.json `
   --revision <commit-or-tag> `
