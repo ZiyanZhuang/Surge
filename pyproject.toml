@@ -39,6 +39,7 @@ py-modules = ["benchmark_64", "benchmark_real_smoke", "benchmark_real_adapter_sm
 [tool.setuptools.data-files]
 "." = ["README.md", "README.zh-CN.md", "DESIGN.zh-CN.md", "BENCHMARKS.zh-CN.md", "SMOKE-TEST-PLAN.zh-CN.md", "PHILOSOPHY.md", "PHILOSOPHY.zh-CN.md", "PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md", "CONTRIBUTING.zh-CN.md", "THIRD_PARTY_NOTICES.md", "preset-langchao.patch.yml", "LICENSE"]
 "docs" = ["docs/QUICKSTART.zh-CN.md", "docs/ADAPTER-CONTRACT.zh-CN.md"]
+"docs/assets" = ["docs/assets/surge-workflow.png"]
 "tests" = ["tests/test_core.py", "tests/test_finqa.py", "tests/test_real_smoke.py", "tests/test_select_finqa.py", "tests/test_real_adapter_smoke.py", "tests/test_release_hygiene.py"]
 "tests/fixtures/finqa" = ["tests/fixtures/finqa/smoke.jsonl", "tests/fixtures/finqa/MANIFEST.json", "tests/fixtures/finqa/README.md"]
 "benchmark-results" = [

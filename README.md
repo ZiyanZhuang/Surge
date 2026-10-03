@@ -10,6 +10,12 @@ Surge Mode is a **single-host, SQLite-backed DAG scheduler MVP** for bounded, au
 
 [Architecture](DESIGN.zh-CN.md) · [Quick start](docs/QUICKSTART.zh-CN.md) · [WorkerAdapter contract](docs/ADAPTER-CONTRACT.zh-CN.md) · [Philosophy](PHILOSOPHY.md) · [Diagram prompt](PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md) · [Contribution hygiene](CONTRIBUTING.zh-CN.md)
 
+## Workflow: from human questions to verifiable actions
+
+[![Surge workflow: human goals and budget → Scout → Deepen → Verify → Synthesize → human review, supported by bounded orchestration and stop gates](<docs/assets/surge-workflow.png>)](<docs/assets/surge-workflow.png>)
+
+*Conceptual overview; click to view the full-size image. Budgets and timeouts are illustrative, not defaults. Stop gates apply throughout execution; the implemented scope and remaining work are listed below.*
+
 ## Why “Surge”
 
 A new tool never changes only the individual hand that holds it. It changes how people work together, how far a decision travels, and how quickly an error can spread. We borrow the image of the **rider** and the **commander**: one person may extend their reach with one Agent; a team may organize scouts, researchers, verifiers, and synthesizers—but people still set the aim, allocate scarce resources, examine the evidence, and answer for the result.

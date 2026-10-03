@@ -10,6 +10,12 @@
 
 [设计架构](DESIGN.zh-CN.md) · [快速运行](docs/QUICKSTART.zh-CN.md) · [WorkerAdapter 契约](docs/ADAPTER-CONTRACT.zh-CN.md) · [哲学出发点](PHILOSOPHY.zh-CN.md) · [哲学示意图提示词](PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md) · [提交与归属](CONTRIBUTING.zh-CN.md)
 
+## 工作流：从人的问题到可验证的行动
+
+[![浪潮工作流：人设定目标与预算，经 Scout、Deepen、Verify、Synthesize 四个波次进入人工审查，底层提供有界调度与停止闸门](<docs/assets/surge-workflow.png>)](<docs/assets/surge-workflow.png>)
+
+*点击图片查看原图。图中预算与超时数值用于示意，并非默认配置；停止闸门贯穿执行过程。当前已实现的能力与待完成部分见下方发布状态。*
+
 ## 哲学出发点
 
 “浪潮”描述一种来到我们身边的历史力量。我们借用“骑士”和“指挥官”两个形象：一个人可以借助单个智能体扩大行动半径；一个团队可以把侦察、深入、验证和综合交给不同 Agent，再由人设定目标、分配资源、审查结果。我们希望留下的，是一套能够复核、能够记录失败、能够让后来者继续接力的工具。完整论述见 [PHILOSOPHY.zh-CN.md](PHILOSOPHY.zh-CN.md)。

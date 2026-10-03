@@ -19,6 +19,7 @@ REQUIRED_SUFFIXES = (
     "THIRD_PARTY_NOTICES.md",
     "docs/QUICKSTART.zh-CN.md",
     "docs/ADAPTER-CONTRACT.zh-CN.md",
+    "docs/assets/surge-workflow.png",
     "tests/fixtures/finqa/smoke.jsonl",
     "tests/fixtures/finqa/MANIFEST.json",
     "tests/fixtures/finqa/README.md",

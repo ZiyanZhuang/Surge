@@ -28,6 +28,13 @@ class ReleaseHygieneTests(unittest.TestCase):
             self.assertTrue(path.is_file(), path)
         self.assertIn("FinQA", (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8"))
 
+    def test_workflow_image_exists_and_is_linked_from_both_readmes(self):
+        image_path = "docs/assets/surge-workflow.png"
+        self.assertEqual((ROOT / image_path).read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+        for name in ("README.md", "README.zh-CN.md"):
+            with self.subTest(readme=name):
+                self.assertIn(f"](<{image_path}>)", (ROOT / name).read_text(encoding="utf-8"))
+
     def test_fixture_manifest_has_provenance_and_license_status(self):
         manifest = json.loads((ROOT / "tests" / "fixtures" / "finqa" / "MANIFEST.json").read_text(encoding="utf-8"))
         for field in ("source_url", "revision", "split", "fixture_sha256", "record_ids", "license_status", "attribution"):
