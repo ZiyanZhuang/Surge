@@ -29,16 +29,26 @@ class _FakeHandler(BaseHTTPRequestHandler):
         return
 
 
-def _sse(*, answer: str = '{"answer":"93.5%"}', output_tokens: int = 75, complete: bool = True) -> bytes:
+def _sse(
+    *,
+    answer: str = '{"answer":"93.5%"}',
+    output_tokens: int = 75,
+    complete: bool = True,
+    include_usage: bool = True,
+    reverse_tail: bool = False,
+) -> bytes:
+    usage = {"usage": {"input_tokens": 10, "output_tokens": output_tokens}} if include_usage else {"type": "message_delta"}
     frames = [
         'event: message_start\ndata: {"type":"message_start"}\n\n',
         'event: content_block_start\ndata: {"type":"content_block_start"}\n\n',
         f'event: content_block_delta\ndata: {json.dumps({"delta": {"type": "text_delta", "text": answer}})}\n\n',
         'event: content_block_stop\ndata: {"type":"content_block_stop"}\n\n',
-        f'event: message_delta\ndata: {json.dumps({"usage": {"input_tokens": 10, "output_tokens": output_tokens}})}\n\n',
+        f'event: message_delta\ndata: {json.dumps(usage)}\n\n',
     ]
     if complete:
         frames.append('event: message_stop\ndata: {"type":"message_stop"}\n\n')
+    if reverse_tail and complete:
+        frames[-1], frames[-2] = frames[-2], frames[-1]
     return "".join(frames).encode("utf-8")
 
 
@@ -69,9 +79,24 @@ class RealAdapterSmokeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "missing events"):
             smoke.call_adapter(self.url, "test-model", "solve", 2)
 
+    def test_event_order_fails_closed(self):
+        _FakeHandler.payload = _sse(reverse_tail=True)
+        with self.assertRaisesRegex(RuntimeError, "event order"):
+            smoke.call_adapter(self.url, "test-model", "solve", 2)
+
+    def test_missing_usage_fails_closed(self):
+        _FakeHandler.payload = _sse(include_usage=False)
+        with self.assertRaisesRegex(RuntimeError, "usage"):
+            smoke.call_adapter(self.url, "test-model", "solve", 2)
+
     def test_provider_output_over_limit_fails_closed(self):
         _FakeHandler.payload = _sse(output_tokens=smoke.MAX_OUTPUT_TOKENS + 1)
         with self.assertRaisesRegex(RuntimeError, "above requested limit"):
+            smoke.call_adapter(self.url, "test-model", "solve", 2)
+
+    def test_oversized_response_fails_closed(self):
+        _FakeHandler.payload = _sse() + b"x" * (smoke.MAX_RESPONSE_BYTES + 1)
+        with self.assertRaisesRegex(RuntimeError, "exceeds"):
             smoke.call_adapter(self.url, "test-model", "solve", 2)
 
     def test_scheduler_persists_successful_adapter_result(self):

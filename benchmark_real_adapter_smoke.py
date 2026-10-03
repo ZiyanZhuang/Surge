@@ -145,6 +145,9 @@ def call_adapter(url: str, model: str, prompt: str, timeout: float) -> dict[str,
     missing = [event for event in _REQUIRED_EVENTS if event not in events]
     if missing:
         raise RuntimeError(f"adapter SSE missing events: {', '.join(missing)}")
+    positions = [events.index(event) for event in _REQUIRED_EVENTS]
+    if positions != sorted(positions):
+        raise RuntimeError("adapter SSE event order is incomplete or invalid")
     normalized_usage = _require_usage(usage)
     if not text.strip():
         raise RuntimeError("adapter SSE contained no text output")

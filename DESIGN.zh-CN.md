@@ -108,7 +108,7 @@ nodes = [
 
 ## 6. 验证证据
 
-测试覆盖（当前 57 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 5 项真实 adapter 安全/调度 harness 单测 + 4 项发布卫生单测）：
+测试覆盖（当前 60 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 8 项真实 adapter 安全/调度 harness 单测 + 4 项发布卫生单测）：
 
 1. 32 节点扇出、`max_workers=8`，确认实际并发不越界。
 2. 依赖缺失、环检测。
