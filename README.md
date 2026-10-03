@@ -1,8 +1,22 @@
 # DSH Surge Mode
 
-Surge Mode is a **single-host, SQLite-backed DAG scheduler MVP** for bounded, auditable, recoverable Agent work. It is a Python execution core plus a DSH preset example—not a distributed cluster, an LLM training project, or a completed direct DSH `llm` bridge.
+[中文](README.zh-CN.md) · **English**
 
-The name reflects the project's philosophy: people may ride one Agent like a productive tool, or command a bounded Agent team like a commander. The goal is not unlimited swarm size. It is to match orchestration, evidence, budget, and stopping conditions to real code, project, statistics, and research problems. See [PHILOSOPHY.md](PHILOSOPHY.md) and the [Chinese essay](PHILOSOPHY.zh-CN.md).
+[![MIT License](https://img.shields.io/badge/license-MIT-2f855a?logo=opensourceinitiative&logoColor=white)](LICENSE) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab?logo=python&logoColor=white)](pyproject.toml) [![GitHub Actions](https://img.shields.io/badge/CI-GitHub_Actions-2088ff?logo=githubactions&logoColor=white)](.github/workflows/ci.yml) [![DSH](https://img.shields.io/badge/DSH-Surge_Mode-6b46c1?logo=opensourceinitiative&logoColor=white)](preset-langchao.patch.yml)
+
+We did not begin this project because we believe that adding more Agents will, by itself, bring the future closer. We began because a new kind of power is arriving: it lets one person read farther, try more possibilities, and lets a small team take difficult work apart and arrange it again. The greater the reach, the more important it becomes to keep hold of the reins—and to know when to stop.
+
+Surge Mode is a **single-host, SQLite-backed DAG scheduler MVP** for bounded, auditable, recoverable Agent work. It is a Python execution core plus a DSH preset example. It puts budget, evidence, dependencies, recovery, and failure states in front of model calls, because we want people to use a new productive force without handing away judgment or responsibility. It is not a distributed research cluster, an LLM training project, or a completed direct DSH `llm` bridge.
+
+[Architecture](DESIGN.zh-CN.md) · [Quick start](docs/QUICKSTART.zh-CN.md) · [WorkerAdapter contract](docs/ADAPTER-CONTRACT.zh-CN.md) · [Philosophy](PHILOSOPHY.md) · [Diagram prompt](PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md) · [Contribution hygiene](CONTRIBUTING.zh-CN.md)
+
+## Why “Surge”
+
+A new tool never changes only the individual hand that holds it. It changes how people work together, how far a decision travels, and how quickly an error can spread. We borrow the image of the **rider** and the **commander**: one person may extend their reach with one Agent; a team may organize scouts, researchers, verifiers, and synthesizers—but people still set the aim, allocate scarce resources, examine the evidence, and answer for the result.
+
+Surge Mode is not a case for an unlimited swarm. One more Agent is not automatically one more insight. The point is to make difficult work more truthful, more traceable, and more possible for the people doing it.
+
+Read the longer essay in [PHILOSOPHY.md](PHILOSOPHY.md) or [中文哲学文](PHILOSOPHY.zh-CN.md).
 
 ## Current status
 

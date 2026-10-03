@@ -14,6 +14,7 @@ REQUIRED_SUFFIXES = (
     "LICENSE",
     "PHILOSOPHY.md",
     "PHILOSOPHY.zh-CN.md",
+    "PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md",
     "CONTRIBUTING.zh-CN.md",
     "THIRD_PARTY_NOTICES.md",
     "docs/QUICKSTART.zh-CN.md",

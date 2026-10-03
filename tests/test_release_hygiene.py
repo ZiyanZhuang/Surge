@@ -16,6 +16,7 @@ class ReleaseHygieneTests(unittest.TestCase):
             ROOT / "LICENSE",
             ROOT / "PHILOSOPHY.md",
             ROOT / "PHILOSOPHY.zh-CN.md",
+            ROOT / "PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md",
             ROOT / "CONTRIBUTING.zh-CN.md",
             ROOT / "THIRD_PARTY_NOTICES.md",
             ROOT / "docs" / "QUICKSTART.zh-CN.md",
