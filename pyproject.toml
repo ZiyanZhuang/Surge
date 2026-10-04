@@ -39,17 +39,18 @@ dsh-surge-real-smoke = "benchmark_real_smoke:main"
 dsh-surge-select-finqa = "select_finqa_fixture:main"
 dsh-surge-real-adapter-smoke = "benchmark_real_adapter_smoke:main"
 dsh-surge-gate-c = "benchmark_gate_c:main"
+dsh-surge-gate-d = "benchmark_gate_d:main"
 dsh-surge-run = "run_dag:main"
 
 [tool.setuptools]
 packages = ["surge_cluster"]
-py-modules = ["benchmark_64", "benchmark_real_smoke", "benchmark_real_adapter_smoke", "benchmark_gate_c", "select_finqa_fixture", "run_dag"]
+py-modules = ["benchmark_64", "benchmark_real_smoke", "benchmark_real_adapter_smoke", "benchmark_gate_c", "benchmark_gate_d", "select_finqa_fixture", "run_dag"]
 
 [tool.setuptools.data-files]
 "." = ["README.md", "README.zh-CN.md", "DESIGN.zh-CN.md", "BENCHMARKS.zh-CN.md", "SMOKE-TEST-PLAN.zh-CN.md", "PHILOSOPHY.md", "PHILOSOPHY.zh-CN.md", "PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md", "CONTRIBUTING.zh-CN.md", "THIRD_PARTY_NOTICES.md", "preset-langchao.patch.yml", "LICENSE"]
 "docs" = ["docs/QUICKSTART.zh-CN.md", "docs/ADAPTER-CONTRACT.zh-CN.md"]
 # README 中的工作流配图体积较大，只在仓库与网页中提供，不进入 sdist/wheel。
-"tests" = ["tests/test_core.py", "tests/test_finqa.py", "tests/test_real_smoke.py", "tests/test_select_finqa.py", "tests/test_real_adapter_smoke.py", "tests/test_http_adapter.py", "tests/test_isolation.py", "tests/test_verification.py", "tests/test_gate_c.py", "tests/test_run_dag.py", "tests/test_release_hygiene.py"]
+"tests" = ["tests/test_core.py", "tests/test_finqa.py", "tests/test_real_smoke.py", "tests/test_select_finqa.py", "tests/test_real_adapter_smoke.py", "tests/test_http_adapter.py", "tests/test_isolation.py", "tests/test_verification.py", "tests/test_envelopes.py", "tests/test_model_verifier.py", "tests/test_bridge_contract.py", "tests/test_gate_c.py", "tests/test_gate_d.py", "tests/test_run_dag.py", "tests/test_release_hygiene.py"]
 "tests/fixtures/finqa" = ["tests/fixtures/finqa/smoke.jsonl", "tests/fixtures/finqa/MANIFEST.json", "tests/fixtures/finqa/README.md"]
 "benchmark-results" = [
     "benchmark-results/benchmark-64.json",

@@ -37,7 +37,7 @@
 
 ## 发布状态
 
-当前为 `v0.1.0` 级别的技术预览。已经具备：单机调度内核、离线回放、artifact/evidence 校验、库内一等公民的真实模型适配器 `surge_cluster.HttpWorkerAdapter`、把它串成一条命令的 `dsh-surge-run`、进程级硬隔离 `IsolatedAdapter`、独立验证器与 provenance，以及三案例 `max_workers=2` 的真实并发运行（Gate C）。尚未完成：Python 到 DSH Host `llm.stream` business Service 的直接 bridge、64 路以上的真实容量验证、模型侧 verifier 和 envelope 落库。真实调用是显式选择的网络行为，不属于默认回归测试。
+当前为 `v0.1.0` 级别的技术预览。已经具备：单机调度内核、离线回放、artifact/evidence 校验、库内一等公民的真实模型适配器 `surge_cluster.HttpWorkerAdapter`、把它串成一条命令的 `dsh-surge-run`、进程级硬隔离 `IsolatedAdapter`、独立验证器（确定性 + 模型侧）与 claim provenance、envelope 落库、DSH Host `llm.stream` 直连 bridge（`dsh-bridge/`，协议层已自测，激活需重启 Host），以及真实并发测量：Gate C（3 案例 / `max_workers=2`）与 Gate D（16/32/64 档容量曲线，实测突发上限位于 32 与 64 之间）。尚未完成：直接 DSH Host `llm.stream` bridge 的端到端激活验证、稳定配额或 SLA 结论、多节点演进。真实调用是显式选择的网络行为，不属于默认回归测试。
 
 ## 当前能力
 
@@ -63,8 +63,11 @@
 - `dsh-surge-run`：读取 JSON 任务计划，离线校验（`--dry-run`）或经授权 endpoint 真实执行，输出含 UTC 时间戳、环境快照、计划摘要、逐节点状态、预算快照、事件计数和 provenance 的报告
 - `IsolatedAdapter`：把任意 adapter 的每次调用放进独立子进程，提供硬超时（terminate/kill）与严格物理并发上界，并把逐次调用证据带回父进程
 - `EvidenceVerifier` 与 `VerifyingAdapter`：独立检查证据缺失、悬空引用、自引用与答案一致性；只标注不改写，`fail` 策略会让验证失败的节点失败并阻断下游
+- `ModelVerifier`：用另一个模型调用做验证，严格要求 `{"pass","score","issues"}`；输出不可解析时记为**未通过**，绝不记为通过；其 token 折回节点 usage，预算不会少记
 - `build_provenance`：从只读审计接口重建 node/artifact/claim 图，报告 digest 不一致等完整性发现
-- 只读审计面：`snapshot`、`artifacts`、`read_artifact`、`events`、`budget_snapshot`，用于外部复核而不参与调度决策
+- envelope 落库：成功与验证失败的 attempt 都保存 envelope（超限时写保留 claim 的投影并附 hash），因此运行结束后仍能重建 claim 级 provenance
+- 只读审计面：`snapshot`、`artifacts`、`read_artifact`、`events`、`budget_snapshot`、`envelopes`，用于外部复核而不参与调度决策
+- DSH Host bridge：`dsh-bridge/dsh-llm-bridge.mjs` 把 `ctx.llm.stream` 映射为 Anthropic SSE，使 Python 侧复用同一个 `HttpWorkerAdapter`；回环限定端口 + token 鉴权 + 并发上限，`node dsh-bridge/selftest.mjs` 有 34 项自测
 
 内部 `wave` 从 0 开始（`wave=0` 是用户概念中的 Wave 1/Scout），后续为 `wave=1/2/3`；preset 的自然语言 Wave 1–4 不改变这一内部编号。
 

@@ -6,9 +6,13 @@
 
 ```powershell
 python -B -m unittest discover -s tests -v
+node dsh-bridge\selftest.mjs
 python -m build --sdist --wheel --outdir .release-build
 python scripts/verify_release.py --dist .release-build
 ```
+
+改动 `dsh-bridge/` 的输出格式后，运行 `node dsh-bridge\selftest.mjs --write-golden` 重新生成
+`golden-sse.txt`，并确认 `tests/test_bridge_contract.py` 随之通过。
 
 真实 provider 烟测不是默认 CI 步骤，必须明确获得授权，并且不得把 API key、原始敏感 prompt、完整日志或临时 SQLite/artifact 目录提交到 Git。
 

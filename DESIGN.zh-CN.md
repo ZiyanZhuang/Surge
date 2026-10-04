@@ -117,7 +117,7 @@ nodes = [
 
 ## 6. 验证证据
 
-测试覆盖（当前 134 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 8 项真实 adapter 烟测 harness 单测 + 20 项库内 HTTP adapter 单测 + 8 项进程隔离单测 + 20 项验证与 provenance 单测 + 9 项 Gate C harness 单测 + 14 项 CLI/计划单测 + 7 项发布卫生单测）：
+测试覆盖（当前 179 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 8 项真实 adapter 烟测 harness 单测 + 20 项库内 HTTP adapter 单测 + 8 项进程隔离单测 + 21 项验证与 provenance 单测 + 12 项 envelope 落库单测 + 19 项模型验证器单测 + 5 项 bridge 契约单测 + 9 项 Gate C harness 单测 + 8 项 Gate D harness 单测 + 14 项 CLI/计划单测 + 7 项发布卫生单测；另有 `dsh-bridge/selftest.mjs` 34 项 Node 侧检查在 CI 中执行）：
 
 1. 32 节点扇出、`max_workers=8`，确认实际并发不越界。
 2. 依赖缺失、环检测。
@@ -132,6 +132,9 @@ nodes = [
 11. `dsh-surge-run`：离线 `--dry-run` 不触碰 endpoint、真实模式必须显式给出 `--endpoint`、计划未知字段/重复 id/悬空依赖/schema 版本被拒绝、失败节点与下游 blocked 的退出码与报告字段、stdout 保持 ASCII。
 12. `IsolatedAdapter`：结果跨进程往返、不合作 worker 被硬超时终止、取消会终止子进程、内层失败保留 `kind`、不可 JSON 化的 envelope 在边界内失败、`max_processes=1` 时子进程时间区间不重叠、逐次调用证据能带回父进程。
 13. `EvidenceVerifier` 与 `build_provenance`：缺证据、悬空引用、自引用、答案不在证据中、不可读引用的严重级别、内容被篡改时的 digest 不一致、claim 层缺失时如实声明 `claims_available=false`。
+14. envelope 落库：成功与验证失败都落库、adapter 异常不落库、超限写保留 claim 的投影并附 answer/envelope 双哈希、损坏记录只报告不抛错、旧 schema 增量迁移出 `envelope` 列、provenance 可从落库 envelope 重建 claim 层。
+15. 模型验证器：合法判定、围栏 JSON、输出不可解析或字段类型错误一律记为未通过、无可用证据时不调用验证器、验证器异常向上传播、证据去重、超长证据标记截断、token 折回 usage 且调度器结算含验证开销。
+16. bridge 契约：golden SSE 事件顺序与 snake_case usage、已发布的 `HttpWorkerAdapter` 能消费 bridge 输出、插件绑定 `llm` 服务且不写日志。
 
 运行命令：
 
@@ -146,7 +149,7 @@ python -m unittest discover -s tests -v
 
 ### P1：真实 DSH Host adapter
 
-本地 Messages SSE 适配器已经是一等公民（`surge_cluster.http_adapter`），并配有 `dsh-surge-run` 执行入口。本阶段剩下的是把 DSH Host 已确认的 Agent/LLM 调用契约直接封装为 `WorkerAdapter`：透传 run/node/attempt id、取消信号、usage 和错误分类，先做单 Host 集成测试，不猜测未 Inspect 的 Service API。当前 `AdapterFailure` 已带 `kind`/`retryable`，但调度器仍对任何异常按 `max_attempts` 重试，尚未按 kind 分流。
+两条路径都已就位：(a) `surge_cluster.http_adapter` 面向任意 Anthropic-compatible Messages endpoint；(b) `dsh-bridge/` 提供 Host 插件，把 `ctx.llm.stream` 映射为同一线格式，Python 侧无需新增传输代码。协议映射、鉴权、并发上限、取消传播与 fail-closed 行为已由 34 项 Node 自测与 5 项 Python 契约测试覆盖；**尚未验证的是真实 Host 注入 `ctx.llm` 后的端到端调用**，因为激活需要修改 profile 并重启 Host。剩余工作：在授权重启后跑一次端到端烟测，并按 `AdapterFailure.kind` 与 `retryable` 在调度器内实现按类型分流的重试策略（当前对所有异常统一按 `max_attempts` 重试）。
 
 ### P2：进程级隔离与资源池
 
@@ -154,7 +157,7 @@ python -m unittest discover -s tests -v
 
 ### P3：可观测性与科研校验
 
-确定性验证器与 provenance 已经实现：`EvidenceVerifier` 检查证据缺失、悬空引用、自引用与答案一致性，`build_provenance` 从只读审计接口重建 node/artifact/claim 图并报告 digest 不一致等完整性发现；`VerifyingAdapter` 只标注、不改写结果。剩余工作是模型侧 verifier adapter（必须同样只输出 pass/fail/score/issues）、结构化指标导出（队列等待、token、成本、重试率、波次通过率）以及把 envelope 落库，使 claim 层 provenance 在运行结束后也能重建。
+确定性验证器、模型侧验证器与 provenance 都已实现：`EvidenceVerifier` 检查证据缺失、悬空引用、自引用与答案一致性；`ModelVerifier` 用严格 schema 做第二次模型判定，输出不可解析时记为未通过并把自身 token 折回预算；`build_provenance` 从只读审计接口重建 node/artifact/claim 图。envelope 已经落库（超限时写保留 claim 的投影），因此 claim 级 provenance 在运行结束后仍可重建。剩余工作是结构化指标导出（队列等待、token、成本、重试率、波次通过率）与模型验证器的独立路由（当前它与 worker 共用同一个 endpoint 与成本口径）。
 
 ### P4：多节点演进
 

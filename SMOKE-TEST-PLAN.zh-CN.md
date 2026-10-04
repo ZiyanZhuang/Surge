@@ -115,6 +115,22 @@ python benchmark_gate_c.py `
 
 **执行状态**：Gate C 已于 2026-10-04T03:04:17Z 执行并通过，三案例、`max_workers=2`、实测峰值并发 2、6/6 节点成功、预算不变量成立、真实结算 0.00935。逐案例结果与原始记录见 [smoke-results/README.zh-CN.md](smoke-results/README.zh-CN.md) 与 [gate-c.json](smoke-results/gate-c.json)。它仍然只说明这三个案例在这条 endpoint 上完成，`max_workers=2` 也不构成 64 路真实容量结论。
 
+## Gate D：真实并发容量曲线
+
+Gate C 验证"有界并发下的调度与预算语义"，Gate D 测量"同一 endpoint 在不同并发档位下能返回多少合法结果"。harness 是 `benchmark_gate_d.py`（`tests/test_gate_d.py` 覆盖离线路径）：
+
+```powershell
+python benchmark_gate_d.py `
+  --endpoint http://127.0.0.1:17800/v1/messages `
+  --model gpt-6.1-sol `
+  --levels 16,32,64 `
+  --output smoke-results\gate-d.json
+```
+
+任务固定为返回一个极小的 JSON 对象，`max_attempts=1`（不重试掩盖失败），每个档位一次发起 N 个并发调用。报告给出每档的 submitted / returned_valid / valid_rate / 失败分类 / 峰值并发 / wall / 延迟分位 / 成本。
+
+**执行状态**：Gate D 已于 2026-10-04T03:25:30Z 执行。16 并发 13/16、32 并发 27/32、64 并发 **0/64**（全部为上游 429，5.3 秒整批拒绝，成本 0），即该 endpoint 的突发上限位于 32 与 64 之间。详见 [smoke-results/README.zh-CN.md](smoke-results/README.zh-CN.md) 与 [BENCHMARKS.zh-CN.md](BENCHMARKS.zh-CN.md) 第 6 节。这仍不是稳定配额或 SLA 结论。
+
 ## 暂不纳入首轮
 
 SWE-bench 需要仓库 checkout、补丁应用和测试执行，适合作为后续代码修复 agent 专项烟测，而非首轮科研证据 DAG 烟测。参考：[SWE-bench Quick Start](https://www.swebench.com/SWE-bench/guides/quickstart/)。

@@ -1,0 +1,2505 @@
+{
+  "adapter": {
+    "cost_per_1k_tokens": 0.01,
+    "endpoint": "http://127.0.0.1:17800/v1/messages",
+    "max_attempts": 1,
+    "model": "gpt-6.1-sol",
+    "node_max_tokens": 8000,
+    "request_max_tokens_ceiling": 2000,
+    "transport": "Anthropic Messages SSE; authorized local reverse proxy"
+  },
+  "benchmark": "Gate D: real-provider concurrency capacity curve",
+  "capacity_summary": [
+    {
+      "failure_kinds": {
+        "http": 3
+      },
+      "level": 16,
+      "peak_concurrency": 16,
+      "valid_rate": 0.8125
+    },
+    {
+      "failure_kinds": {
+        "http": 5
+      },
+      "level": 32,
+      "peak_concurrency": 32,
+      "valid_rate": 0.8438
+    },
+    {
+      "failure_kinds": {
+        "http": 64
+      },
+      "level": 64,
+      "peak_concurrency": 64,
+      "valid_rate": 0.0
+    }
+  ],
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.3"
+  },
+  "generated_at_utc": "2026-10-04T03:25:30Z",
+  "levels": [
+    {
+      "adapter_calls": [
+        {
+          "elapsed_seconds": 1.786819,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-09",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.914935,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-11",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 2.214603,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-14",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.43149,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-01",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.461712,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-00",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.287094,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-13",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.308422,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-07",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.781004,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-10",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 3.17719,
+          "events": 10,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-02",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 3.161463,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-04",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 5.291996,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-06",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 11.764503,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-03",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 12.339587,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-15",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 23
+          }
+        },
+        {
+          "elapsed_seconds": 14.240025,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-08",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 20.964828,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-12",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 22.743152,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-05",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        }
+      ],
+      "adapter_ok_calls": 13,
+      "blocked_nodes": 0,
+      "budget_invariant_ok": true,
+      "failed_nodes": 3,
+      "failure_kinds": {
+        "http": 3
+      },
+      "latency_seconds": {
+        "max": 22.743152,
+        "median": 3.17719,
+        "p95": 20.964828
+      },
+      "level": 16,
+      "nodes": [
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-00",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-01",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-02",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-03",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-04",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-05",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-06",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-07",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-08",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-09",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-10",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-11",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-12",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-13",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-14",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-15",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        }
+      ],
+      "peak_concurrency": 16,
+      "returned_valid": 13,
+      "spent_cost": 0.009629999999999998,
+      "status": "failed",
+      "submitted": 16,
+      "valid_rate": 0.8125,
+      "wall_seconds": 23.056
+    },
+    {
+      "adapter_calls": [
+        {
+          "elapsed_seconds": 1.239842,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-29",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.248487,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-30",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.310217,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-17",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.336014,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-22",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.850482,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-09",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 1.8465,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-14",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.875503,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-08",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 1.862384,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-13",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 1.8983,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-12",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.048262,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-06",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.123704,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-19",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.373366,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-02",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.311329,
+          "events": 10,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-31",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.447974,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-03",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.544315,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-28",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.589779,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-24",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 2.628431,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-23",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 3.156889,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-01",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 3.08741,
+          "events": 10,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-27",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 3.209848,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-18",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 4.327668,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-04",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 4.474355,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-11",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 5.135314,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-10",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 5.306788,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-00",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 6.538973,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-07",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 10.882743,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-16",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 12.394904,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-15",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 12.655792,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-21",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 13.996074,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-05",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 20.958129,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-20",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 21.975286,
+          "events": 10,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-25",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        },
+        {
+          "elapsed_seconds": 22.99968,
+          "events": 6,
+          "http_status": 200,
+          "kind": "ok",
+          "node_id": "agent-26",
+          "ok": true,
+          "output_sha256": "6a4c2664fb6a767730a3059334efda7a44b2f1ba7701bddfeebbaa5db0d11a73",
+          "request_max_tokens": 2000,
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 9
+          }
+        }
+      ],
+      "adapter_ok_calls": 27,
+      "blocked_nodes": 0,
+      "budget_invariant_ok": true,
+      "failed_nodes": 5,
+      "failure_kinds": {
+        "http": 5
+      },
+      "latency_seconds": {
+        "max": 22.99968,
+        "median": 3.156889,
+        "p95": 21.975286
+      },
+      "level": 32,
+      "nodes": [
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-00",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-01",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-02",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-03",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-04",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-05",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-06",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-07",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-08",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-09",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-10",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-11",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-12",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-13",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-14",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-15",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-16",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-17",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-18",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-19",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-20",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-21",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-22",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-23",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-24",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-25",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-26",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-27",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-28",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-29",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-30",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": null,
+          "id": "agent-31",
+          "incremental_value": 1.0,
+          "progress": 1.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "succeeded",
+          "urgency": 0.0
+        }
+      ],
+      "peak_concurrency": 32,
+      "returned_valid": 27,
+      "spent_cost": 0.019710000000000005,
+      "status": "failed",
+      "submitted": 32,
+      "valid_rate": 0.8438,
+      "wall_seconds": 23.184
+    },
+    {
+      "adapter_calls": [
+        {
+          "elapsed_seconds": 0.332224,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-33",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.36899,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-29",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.470519,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-20",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.554596,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-12",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.5671,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-08",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.554451,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-15",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.572324,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-13",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.545224,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-24",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.548461,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-25",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.590876,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-14",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.601554,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-11",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.564271,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-26",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.648739,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-01",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.640768,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-05",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.653726,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-03",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.646878,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-09",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.668893,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-04",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.634589,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-16",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.615858,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-23",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.622193,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-22",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.639008,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-17",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.677813,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-07",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.671036,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-10",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.651519,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-19",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.773557,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-28",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.826732,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-30",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.915377,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-00",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.977369,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-02",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.930575,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-27",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.940822,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-36",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.950528,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-38",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.980612,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-31",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.97805,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-42",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.974724,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-47",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.982499,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-48",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.11114,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-06",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.947622,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-62",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 0.97474,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-60",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.084913,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-37",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.020274,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-59",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.097468,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-41",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.063934,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-56",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.138583,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-35",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.15567,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-40",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.120419,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-52",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.116706,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-58",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.256214,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-18",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.189132,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-50",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.210505,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-43",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.249809,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-57",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.327414,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-32",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.311448,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-45",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.403586,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-46",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.452524,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-53",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.553106,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-21",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.485581,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-44",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.456199,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-63",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.572906,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-55",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 1.865244,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-49",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 2.359433,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-51",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 2.80116,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-54",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 3.189929,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-39",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 3.309938,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "kind": "http",
+          "node_id": "agent-34",
+          "ok": false,
+          "retryable": true
+        },
+        {
+          "elapsed_seconds": 5.017259,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 502: {\\\"error\\\":{\\\"message\\\":\\\"relay 无法到达 https://chatgpt.com/backend-api/codex/responses: fetch failed\\\"}}\"}}",
+          "kind": "http",
+          "node_id": "agent-61",
+          "ok": false,
+          "retryable": true
+        }
+      ],
+      "adapter_ok_calls": 0,
+      "blocked_nodes": 0,
+      "budget_invariant_ok": true,
+      "failed_nodes": 64,
+      "failure_kinds": {
+        "http": 64
+      },
+      "latency_seconds": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "level": 64,
+      "nodes": [
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-00",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-01",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-02",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-03",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-04",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-05",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-06",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-07",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-08",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-09",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-10",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-11",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-12",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-13",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-14",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-15",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-16",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-17",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-18",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-19",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-20",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-21",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-22",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-23",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-24",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-25",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-26",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-27",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-28",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-29",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-30",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-31",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-32",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-33",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-34",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-35",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-36",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-37",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-38",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-39",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-40",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-41",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-42",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-43",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-44",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-45",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-46",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-47",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-48",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-49",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-50",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-51",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-52",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-53",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-54",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-55",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-56",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-57",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-58",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-59",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-60",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 502: {\\\"error\\\":{\\\"message\\\":\\\"relay 无法到达 https://chatgpt.com/backend-api/codex/responses: fetch failed\\\"}}\"}}",
+          "id": "agent-61",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-62",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        },
+        {
+          "attempt_count": 1,
+          "error": "adapter HTTP 502: {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"上游返回 429: {\\\"detail\\\":\\\"Rate limit exceeded\\\"}\"}}",
+          "id": "agent-63",
+          "incremental_value": 1.0,
+          "progress": 0.0,
+          "route_class": "default",
+          "stage": "wave-0",
+          "status": "failed",
+          "urgency": 0.0
+        }
+      ],
+      "peak_concurrency": 64,
+      "returned_valid": 0,
+      "spent_cost": 0.0,
+      "status": "failed",
+      "submitted": 64,
+      "valid_rate": 0.0,
+      "wall_seconds": 5.286
+    }
+  ],
+  "levels_requested": [
+    16,
+    32,
+    64
+  ],
+  "limitations": [
+    "One endpoint, one machine, one time window: this is not a quota or SLA statement.",
+    "The task is deliberately trivial, so a failure here reflects transport or provider pressure, not task difficulty.",
+    "max_attempts=1: no retry masks a failure, and no retry inflates the success count.",
+    "A success rate at one level does not extrapolate to 'supports N agents'."
+  ],
+  "schema_version": 1,
+  "task": "Extract the single fact requested below and answer with JSON only, no prose.\nschema: {\"answer\": \"<string>\"}\nfact: the capital city of France\n",
+  "total_spent_cost": 0.02934
+}

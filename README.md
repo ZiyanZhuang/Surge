@@ -81,13 +81,33 @@ Optional switches: `--isolate` runs every model call in its own worker process (
 
 `EvidenceVerifier` checks each claim for missing evidence, dangling references, self-reference (a claim whose only evidence comes from the node that produced it), and answer/evidence agreement. `VerifyingAdapter` attaches the result under `envelope["verification"]` and appends issues to `warnings`; it never rewrites the answer, the claims, or any artifact. With `policy="fail"` a failed verification fails the node instead.
 
-`build_provenance` rebuilds the node/artifact/claim graph from the read-only audit surface (`snapshot`, `artifacts`, `read_artifact`, `events`, `budget_snapshot`) and reports integrity findings such as digest mismatches. Envelopes are not persisted by the scheduler, so claim-level provenance is available for the current run; rebuilding it after the fact is future work.
+`ModelVerifier` runs a second model call as the verifier and requires a strict `{"pass", "score", "issues"}` verdict. Unparseable verifier output counts as **not verified**, never as a pass, and the verifier's tokens are folded back into the node usage so budget settlement stays truthful.
+
+Envelopes are persisted per attempt (successful and validation-failed alike), so claim-level provenance can be rebuilt after the run; oversized envelopes are stored as a claim-preserving projection with digests instead of being silently truncated.
+
+## DSH Host `llm.stream` bridge
+
+`dsh-bridge/dsh-llm-bridge.mjs` is a Host plugin that maps `ctx.llm.stream(GenerateOptions)` onto Anthropic Messages SSE, which lets the Python side reuse the same verified `HttpWorkerAdapter` instead of growing a second transport. It binds loopback only, requires a token file, caps concurrency with HTTP 429, never fabricates usage the upstream did not report, and emits an `error` event without `message_stop` when the upstream fails or aborts.
+
+`node dsh-bridge/selftest.mjs` covers the protocol with a stub context (34 checks, also run in CI); `dsh-bridge/golden-sse.txt` is replayed by `tests/test_bridge_contract.py` so both sides stay pinned to one wire format. Activating the plugin requires a profile patch and a Host restart, which is left to the operator.
 
 ## Bounded concurrency against a real endpoint (Gate C)
 
 `benchmark_gate_c.py` submits three FinQA cases as one run with `max_workers=2`, so the third wave-0 node has to wait for a slot. Each case has a real `solve` node and a deterministic `check` node that re-reads the persisted model response and compares it against the frozen oracle. The report includes observed peak concurrency, the budget invariant, heartbeat event counts, per-call metadata, the verification summary, and provenance.
 
-It refuses to run when the estimated input tokens plus the output ceiling would not fit the declared `node.max_tokens`, so a run cannot silently die mid-way on the hard budget. Gate C has been executed: 2026-10-04T03:04:17Z, three cases, `max_workers=2`, observed peak concurrency 2, 6/6 nodes succeeded, budget invariant intact, settled cost 0.00935. See [gate-c.json](smoke-results/gate-c.json) for the raw record. This says nothing about 64-way provider capacity.
+It refuses to run when the estimated input tokens plus the output ceiling would not fit the declared `node.max_tokens`, so a run cannot silently die mid-way on the hard budget. Gate C has been executed: 2026-10-04T03:04:17Z, three cases, `max_workers=2`, observed peak concurrency 2, 6/6 nodes succeeded, budget invariant intact, settled cost 0.00935. See [gate-c.json](smoke-results/gate-c.json) for the raw record.
+
+## Real-provider capacity curve (Gate D)
+
+`benchmark_gate_d.py` fires N simultaneous real calls per level with `max_attempts=1`, using a deliberately trivial task so the measurement reflects transport and provider pressure rather than task difficulty. Executed 2026-10-04T03:25:30Z:
+
+| Concurrency | Valid | Valid rate | Peak | Failure kinds | Wall |
+|---:|---:|---:|---:|---|---:|
+| 16 | 13/16 | 81.25% | 16 | `http` × 3 | 23.1 s |
+| 32 | 27/32 | 84.38% | 32 | `http` × 5 | 23.2 s |
+| 64 | 0/64 | 0% | 64 | `http` × 64 | 5.3 s |
+
+Every failure at 64 was an upstream `429` wrapped as `502`, and the whole burst was refused in 5.3 seconds at zero cost, so this endpoint's burst ceiling sits between 32 and 64. That also explains the older staggered result (16 batches of 4 returning 61/64): pacing keeps the instantaneous concurrency under the ceiling. This is a burst measurement, not a quota, SLA, or sustained-throughput claim. Raw record: [gate-d.json](smoke-results/gate-d.json).
 
 ## Preset versus executor
 

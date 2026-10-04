@@ -31,7 +31,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 from benchmark_real_smoke import file_digest, load_manifest, load_records
 from surge_cluster import (
@@ -113,20 +113,36 @@ def build_nodes(
     return nodes
 
 
-def preflight(
-    records: list[Mapping[str, Any]], *, node_max_tokens: int, max_output_tokens: int
+def preflight_prompts(
+    labels_and_prompts: Iterable[tuple[str, str]],
+    *,
+    node_max_tokens: int,
+    max_output_tokens: int,
 ) -> list[str]:
-    """在花钱之前检查预算口径是否覆盖输入+输出，避免中途硬预算失败。"""
+    """在花钱之前检查预算口径是否覆盖输入+输出，避免中途硬预算失败。
+
+    Gate C 与 Gate D 共用同一判定：``估算输入 + 输出上限 <= node max_tokens``。
+    """
     problems: list[str] = []
-    for index, record in enumerate(records, start=1):
-        estimated_input = estimate_tokens(question_prompt(record))
+    for label, prompt in labels_and_prompts:
+        estimated_input = estimate_tokens(prompt)
         needed = estimated_input + max_output_tokens
         if needed > node_max_tokens:
             problems.append(
-                f"case{index}: estimated input {estimated_input} + output ceiling {max_output_tokens} "
+                f"{label}: estimated input {estimated_input} + output ceiling {max_output_tokens} "
                 f"exceeds node max_tokens {node_max_tokens}; raise --node-max-tokens to at least {needed}"
             )
     return problems
+
+
+def preflight(
+    records: list[Mapping[str, Any]], *, node_max_tokens: int, max_output_tokens: int
+) -> list[str]:
+    return preflight_prompts(
+        ((f"case{index}", question_prompt(record)) for index, record in enumerate(records, start=1)),
+        node_max_tokens=node_max_tokens,
+        max_output_tokens=max_output_tokens,
+    )
 
 
 class GateCAdapter:

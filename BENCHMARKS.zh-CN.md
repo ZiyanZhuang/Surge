@@ -79,7 +79,23 @@ python benchmark_64.py --workers 64 --delay 0.02 --repeat 5
 
 注意：medium/high 是路由请求中的 effort 声明；当前 workflow hook 公开 provider/model 覆盖，但没有独立 numeric reasoning 参数，所以不能把结果解释为已确认的底层 API reasoning token 档位。
 
-## 6. 如何升级为真实 Agent Benchmark
+## 6. Gate D：真实并发容量曲线（已执行）
+
+`benchmark_gate_d.py` 测量同一 endpoint 在不同并发档位下能返回多少**合法**结果。任务固定为返回一个极小的 JSON 对象，把任务复杂度从容量测量中剔除；`max_attempts=1`，失败不重试掩盖；每个档位的节点数是 N，`max_workers=N`，一次发起。
+
+2026-10-04T03:25:30Z 实测（`gpt-6.1-sol`，经授权的本地反代，原始记录 [benchmark-results/gate-d.json](../smoke-results/gate-d.json)）：
+
+| 并发档位 | 返回合法 | 合法率 | 实测峰值并发 | 失败分类 | wall | 延迟中位数 | 结算成本 |
+|---:|---:|---:|---:|---|---:|---:|---:|
+| 16 | 13/16 | 81.25% | 16 | `http` × 3 | 23.056 s | 3.177 s | 0.00963 |
+| 32 | 27/32 | 84.38% | 32 | `http` × 5 | 23.184 s | 3.157 s | 0.01971 |
+| 64 | **0/64** | **0%** | 64 | `http` × 64 | 5.286 s | — | 0.0 |
+
+64 档的失败全部是 `HTTP 502` 包装的上游 `429 Rate limit exceeded`；该档位 5.3 秒即整体返回，成本为 0，说明上游在生成 token 之前拒绝了整批请求。
+
+**结论**：这条 endpoint 的突发上限位于 32 与 64 之间。这与第 5 节历史快照中"16 批 × 4 错峰 → 61/64"一致——错峰把瞬时并发压回上限以下，因此有效。**边界**：这是一次性突发的测量，不是持续吞吐、稳定配额或 SLA；`benchmark_gate_d.py` 可重复执行以观察曲线随时段变化。
+
+## 7. 如何升级为真实 Agent Benchmark
 
 1. 保持固定任务集、固定 prompt、固定 DAG 和固定 `max_workers`。
 2. 将 synthetic adapter 换为真实 DSH Host `WorkerAdapter`，记录 provider/model、首 token 延迟、总 token、重试、429/5xx、成本。
