@@ -139,6 +139,21 @@ class RunResult:
     deferred: tuple[str, ...] = ()
 
 
+class AdapterFailure(RuntimeError):
+    """适配器 fail-closed 失败；调度器按失败 attempt 记录并计入重试。
+
+    ``kind`` 区分失败来源，``retryable`` 表示该来源在语义上是否值得重试。
+    调度器当前对任何异常都按 ``max_attempts`` 重试，尚未按 kind 分流。
+    把它放在 core 是为了让隔离层、HTTP 层和未来的 Host adapter 共用同一失败类型，
+    避免任何一层反向依赖具体传输实现。
+    """
+
+    def __init__(self, message: str, *, kind: str = "adapter", retryable: bool = False):
+        super().__init__(message)
+        self.kind = kind
+        self.retryable = retryable
+
+
 class WorkerAdapter(Protocol):
     def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
         """Execute one node. Implement this in a DSH Host adapter."""
@@ -1533,6 +1548,9 @@ class DAGScheduler:
                             "should_stop": dispatch_info["cancel_event"].is_set,
                             "report_progress": lambda value, detail=None, rid=run_id, nid=node.id, aid=attempt_id: self.report_progress(rid, nid, aid, value, detail),
                             "heartbeat": heartbeat_callback,
+                            # 只读证据入口：adapter/verifier 可读取已提交 artifact 的正文，
+                            # 走 ArtifactStore 的 digest 与路径校验，不触碰调度锁。
+                            "read_artifact": artifact_store.read_text,
                         }
                         dispatch_info["context"] = context
                         future = executor.submit(adapter.run, node, context)
@@ -1791,3 +1809,66 @@ class DAGScheduler:
     def snapshot(self, run_id: str) -> list[dict[str, Any]]:
         with self._lock:
             return [dict(row) for row in self._conn.execute("SELECT id,status,attempt_count,error,stage,incremental_value,urgency,route_class,progress FROM nodes WHERE run_id=? ORDER BY wave,priority DESC,id", (run_id,))]
+
+    def artifacts(self, run_id: str, node_id: str | None = None) -> list[dict[str, Any]]:
+        """只读列出已提交的 artifact 绑定，用于审计与 provenance 构建。
+
+        只返回绑定元数据；正文通过 :meth:`read_artifact` 读取，两条路径都会
+        校验 digest，因此审计结果不会因为文件被替换而失真。
+        """
+        with self._lock:
+            if node_id is None:
+                rows = self._conn.execute(
+                    "SELECT node_id,name,ref,sha256 FROM artifacts WHERE run_id=? ORDER BY node_id,name",
+                    (run_id,),
+                )
+            else:
+                rows = self._conn.execute(
+                    "SELECT node_id,name,ref,sha256 FROM artifacts WHERE run_id=? AND node_id=? ORDER BY name",
+                    (run_id, node_id),
+                )
+            return [dict(row) for row in rows]
+
+    def read_artifact(self, run_id: str, ref: str) -> str:
+        """按引用读取 artifact 正文；digest 不匹配或路径越界都会抛错。"""
+        return ArtifactStore(self._artifact_root(run_id)).read_text(ref)
+
+    def events(self, run_id: str, prefix: str | None = None) -> list[dict[str, Any]]:
+        """只读审计事件流，可按事件名前缀过滤（例如 ``task.heartbeat``）。"""
+        with self._lock:
+            if prefix is None:
+                rows = self._conn.execute(
+                    "SELECT id,node_id,event,detail,created_at FROM events WHERE run_id=? ORDER BY id",
+                    (run_id,),
+                )
+            else:
+                rows = self._conn.execute(
+                    "SELECT id,node_id,event,detail,created_at FROM events WHERE run_id=? AND event LIKE ? ORDER BY id",
+                    (run_id, f"{prefix}%"),
+                )
+            return [dict(row) for row in rows]
+
+    def budget_snapshot(self, run_id: str) -> dict[str, Any]:
+        """只读预算快照：把 ``spent + reserved <= budget`` 这条不变量暴露给外部审计。"""
+        with self._lock:
+            run = self._get_run(run_id)
+            ledger = {
+                row["operation"]: row["total"]
+                for row in self._conn.execute(
+                    "SELECT operation, SUM(amount) AS total FROM budget_ledger WHERE run_id=? GROUP BY operation",
+                    (run_id,),
+                )
+            }
+            entries = self._conn.execute(
+                "SELECT COUNT(*) FROM budget_ledger WHERE run_id=?", (run_id,)
+            ).fetchone()[0]
+        spent, reserved, budget = run["spent_cost"], run["reserved_cost"], run["budget_cost"]
+        return {
+            "budget_cost": budget,
+            "spent_cost": spent,
+            "reserved_cost": reserved,
+            "committed_cost": spent + reserved,
+            "invariant_ok": spent + reserved <= budget + 1e-9,
+            "ledger": ledger,
+            "ledger_entries": entries,
+        }

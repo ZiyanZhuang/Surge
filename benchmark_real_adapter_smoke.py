@@ -30,7 +30,7 @@ from surge_cluster import (
     call_messages_endpoint,
     extract_numeric_answer,
 )
-from surge_cluster.finqa import check_oracle, compare_answer, execute_program
+from surge_cluster.finqa import check_oracle, compare_answer, execute_program, question_prompt
 from surge_cluster.http_adapter import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_MAX_RESPONSE_BYTES,
@@ -65,16 +65,8 @@ def call_adapter(url: str, model: str, prompt: str, timeout: float) -> dict[str,
 
 
 def _prompt(record: dict[str, Any]) -> str:
-    qa = record["qa"]
-    # Do not include answer/exe_ans: the adapter must calculate from the
-    # question and executable program rather than copy a gold field.
-    return (
-        "Solve this FinQA arithmetic question. Return only a JSON object "
-        'with one string field named "answer"; do not include explanation.\n'
-        f"question: {qa['question']}\n"
-        f"program: {qa['program']}\n"
-        f"table: {json.dumps(record.get('table', []), ensure_ascii=False)}"
-    )
+    # 与 Gate C 共用同一份提示构造，避免两处漂移；提示内不含 answer/exe_ans。
+    return question_prompt(record)
 
 
 def _result_dict(result: Any) -> dict[str, Any]:

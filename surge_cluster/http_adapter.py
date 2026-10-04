@@ -20,7 +20,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Callable, Mapping
 
-from .core import NodeSpec, WorkerResult
+from .core import AdapterFailure, NodeSpec, WorkerResult
 
 DEFAULT_MAX_OUTPUT_TOKENS = 2000
 DEFAULT_MAX_RESPONSE_BYTES = 4_000_000
@@ -34,19 +34,6 @@ REQUIRED_SSE_EVENTS = ("message_start", "content_block_delta", "message_delta", 
 DEFAULT_MAX_ARTIFACT_BYTES = 1_900_000
 ARTIFACT_NAME = "model-response"
 _NUMBER_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
-
-
-class AdapterFailure(RuntimeError):
-    """fail-closed 适配器失败；调度器按失败 attempt 记录并计入重试。
-
-    ``kind`` 用于区分失败来源，``retryable`` 表示该来源在语义上是否值得重试。
-    当前调度器对任何异常都按 ``max_attempts`` 重试，尚未按 kind 分流。
-    """
-
-    def __init__(self, message: str, *, kind: str = "adapter", retryable: bool = False):
-        super().__init__(message)
-        self.kind = kind
-        self.retryable = retryable
 
 
 def _positive_number(value: Any, name: str, *, allow_zero: bool = False) -> float:

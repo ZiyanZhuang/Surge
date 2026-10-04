@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from decimal import Decimal, DecimalException, localcontext
 from typing import Any, Mapping
@@ -86,6 +87,22 @@ def execute_program(program: str) -> dict[str, Any]:
                     raise ValueError("program steps require a comma separator")
                 remaining = remaining[1:].strip()
     return {"program": program, "value": str(values[-1]), "trace": trace}
+
+
+def question_prompt(record: Mapping[str, Any]) -> str:
+    """构造只包含问题与可执行 program 的提示。
+
+    刻意不放入 ``answer``/``exe_ans``：适配器必须自己算，而不是抄写 gold 字段。
+    Gate B/Gate C 与烟测脚本共用这一份构造逻辑，避免提示漂移。
+    """
+    qa = record["qa"]
+    return (
+        "Solve this FinQA arithmetic question. Return only a JSON object "
+        'with one string field named "answer"; do not include explanation.\n'
+        f"question: {qa['question']}\n"
+        f"program: {qa['program']}\n"
+        f"table: {json.dumps(record.get('table', []), ensure_ascii=False)}"
+    )
 
 
 def compare_answer(computed: str | None, answer: Any) -> dict[str, Any]:
