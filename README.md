@@ -10,6 +10,19 @@ Surge Mode is a **single-host, SQLite-backed DAG scheduler MVP** for bounded, au
 
 [Architecture](DESIGN.zh-CN.md) · [Quick start](docs/QUICKSTART.zh-CN.md) · [WorkerAdapter contract](docs/ADAPTER-CONTRACT.zh-CN.md) · [Philosophy](PHILOSOPHY.md) · [Diagram prompt](PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md) · [Contribution hygiene](CONTRIBUTING.zh-CN.md)
 
+## Names used by this project
+
+The same project appears under several identifiers across tools. `Surge` and `浪潮模式` are the English and Chinese names of one project; `surge_cluster` is its Python import name.
+
+| Where | Name |
+|---|---|
+| GitHub repository | `Surge` |
+| Distribution | `dsh-surge-mode` |
+| DSH preset | `浪潮模式` / id `langchao` |
+| Python package | `surge_cluster` |
+| CLI | `dsh-surge-*` (`dsh-surge-run`, `dsh-surge-benchmark`, …) |
+| Repository directory | `浪潮模式` |
+
 ## Workflow: from human questions to verifiable actions
 
 [![Surge workflow: human goals and budget → Scout → Deepen → Verify → Synthesize → human review, supported by bounded orchestration and stop gates](<docs/assets/surge-workflow.png>)](<docs/assets/surge-workflow.png>)
@@ -26,9 +39,45 @@ Read the longer essay in [PHILOSOPHY.md](PHILOSOPHY.md) or [中文哲学文](PHI
 
 ## Current status
 
-The scheduler core, SQLite state, bounded per-run concurrency, four-wave gates, route selection, retries, lease recovery, budget accounting, artifact/evidence validation, offline FinQA replay, and an authorized one-case reverse-proxy smoke are implemented. Direct Python-to-DSH `llm.stream` integration, real multi-case concurrency validation, process-level hard isolation, and an independent scientific verifier remain future work.
+The scheduler core, SQLite state, bounded per-run concurrency, four-wave gates, route selection, retries, lease recovery, budget accounting, artifact/evidence validation, offline FinQA replay, the first-class `surge_cluster.HttpWorkerAdapter`, and the `dsh-surge-run` CLI are implemented. Direct Python-to-DSH `llm.stream` integration, real multi-case concurrency validation, process-level hard isolation, and an independent scientific verifier remain future work.
 
-The default test suite is offline. The real adapter smoke is opt-in and must use an authorized local Anthropic-compatible endpoint.
+The project targets research workflows, but the only real dataset exercised so far is the FinQA financial question-answering fixture; scientific-domain tasks are unverified. The default test suite is offline; real calls are opt-in, require an explicitly authorized endpoint, and are not part of the default regression run.
+
+## Running a real DAG in one command
+
+The repository ships a runnable four-wave example at [examples/plan.example.json](examples/plan.example.json). A task plan is a JSON file:
+
+```json
+{
+  "schema_version": 1,
+  "run": {"id": "demo", "budget_cost": 5.0, "max_workers": 2, "deadline_seconds": 600},
+  "nodes": [
+    {"id": "scout", "prompt": "collect evidence", "wave": 0, "max_tokens": 4000, "timeout_seconds": 120},
+    {"id": "synth", "prompt": "summarize verified evidence only", "wave": 1, "depends_on": ["scout"], "max_tokens": 4000}
+  ]
+}
+```
+
+Validate the plan offline first, with no network call:
+
+```powershell
+python run_dag.py --plan plan.json --output report.json --dry-run
+```
+
+Then, only after you have authorized a real call:
+
+```powershell
+python run_dag.py --plan plan.json --output report.json `
+  --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
+```
+
+Exit codes: `0` all nodes succeeded, `1` a node failed or a downstream node was blocked, `2` an invalid plan or argument. The report carries a UTC timestamp, an environment snapshot, the plan SHA-256, per-node status, budget settlement, and per-call metadata that never includes prompt text. Unknown plan fields, duplicate node ids, and dangling dependencies are rejected rather than silently ignored.
+
+`node.max_tokens` is the per-call budget envelope (input plus output); the actual request ceiling is `min(--max-output-tokens, node.max_tokens)`, and the adapter fails closed when provider-reported output exceeds that ceiling.
+
+## Preset versus executor
+
+The DSH `浪潮模式` preset registers a model-visible persona and tool set; it does not run the Python scheduler. Real execution is the job of `dsh-surge-run`: the model is expected to write a JSON plan, validate it with `--dry-run`, and only reach a live endpoint once the user authorizes it. Wave order, budget, evidence references, and failure states are then checked by code, while the persona carries the decomposition and working discipline. Without that CLI, the four waves and gates in the preset are prompt conventions only.
 
 ## Quick start
 
@@ -48,10 +97,11 @@ See [docs/QUICKSTART.zh-CN.md](docs/QUICKSTART.zh-CN.md) for the minimal DAG and
 
 ## Scope and non-goals
 
-- SQLite is suitable for a local MVP, not a distributed task queue.
+- Single host by design; SQLite is suitable for a local MVP, not a distributed task queue.
 - Recovery is **at-least-once**, not exactly-once.
 - Python thread timeouts are cooperative; use process isolation for hard physical limits.
 - Offline replay validates orchestration and evidence semantics, not general model quality or provider capacity.
 - A request `max_tokens` value is not a physical upstream guarantee. The included real adapter fails closed when provider usage is missing or above the requested limit, but an upstream reverse proxy may ignore the request field.
+- The local scheduler benchmark measures a synthetic `sleep`-shaped workload. Its throughput number is a machine-dependent observation, not a capability metric.
 
 See [README.zh-CN.md](README.zh-CN.md) for the complete feature list and [DESIGN.zh-CN.md](DESIGN.zh-CN.md) for the architecture.

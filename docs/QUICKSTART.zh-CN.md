@@ -46,7 +46,39 @@ python scripts/verify_release.py --dist dist
 
 当前项目没有运行时第三方依赖；`build` 仅用于开发构建，已在 `[dev]` extra 中声明。
 
-## 4. 运行真实模型烟测（显式选择）
+## 4. 用一条命令跑真实 DAG
+
+仓库自带一个可以直接运行的四波次示例 [examples/plan.example.json](../examples/plan.example.json)。计划文件的结构如下：
+
+```json
+{
+  "schema_version": 1,
+  "run": {"id": "demo", "budget_cost": 5.0, "max_workers": 2, "deadline_seconds": 600},
+  "nodes": [
+    {"id": "scout", "prompt": "收集证据", "wave": 0, "max_tokens": 4000, "timeout_seconds": 120},
+    {"id": "synth", "prompt": "只汇总已通过验证的证据", "wave": 1, "depends_on": ["scout"], "max_tokens": 4000}
+  ]
+}
+```
+
+先离线校验（无网络调用）：
+
+```powershell
+python run_dag.py --plan plan.json --output report.json --dry-run
+```
+
+确认后再显式授权真实调用：
+
+```powershell
+python run_dag.py --plan plan.json --output report.json `
+  --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
+```
+
+退出码 `0` 表示全部成功，`1` 表示有节点失败或下游 blocked，`2` 表示计划或参数不合法。报告含 UTC 时间戳、环境快照、计划 SHA-256、逐节点状态和逐次调用元数据，不包含 prompt 正文。
+
+计划的 `schema_version` 必须为 `1`；未知字段、重复 id、悬空依赖和 `max_nodes` 小于节点数都会被拒绝。`node.max_tokens` 是单次调用的预算预留上限（输入+输出），真实请求的输出上限为 `min(--max-output-tokens, node.max_tokens)`。
+
+## 5. 运行真实模型烟测（显式选择）
 
 真实调用不是默认测试，需要一个已经授权的 Anthropic-compatible 本地适配器：
 
@@ -62,10 +94,11 @@ python benchmark_real_adapter_smoke.py `
 
 请求中的 `max_tokens=2000` 仍不等于上游服务的物理硬限制；如果反代不转发该字段，脚本只能依据 provider 返回的 usage 拒绝超限结果。
 
-## 5. 非目标
+## 6. 非目标
 
-- 不是跨机器队列、Kubernetes 调度器或 GPU 资源管理器；
+- 跨机器队列、Kubernetes 调度器与 GPU 资源管理器都不在范围内；
 - 不自动创建 DSH Agent/LLM bridge；
 - 不把离线回放当作模型能力证明；
 - 不保证 exactly-once；
-- Python 线程超时是协作式的，硬隔离需要进程 worker。
+- Python 线程超时是协作式的，硬隔离需要进程 worker；
+- `benchmark_64.py` 的吞吐数字来自本地 synthetic `sleep` 负载，属于机器相关的观测值，不能当作调度器能力或容量指标。

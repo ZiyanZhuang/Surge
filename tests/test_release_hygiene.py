@@ -35,6 +35,15 @@ class ReleaseHygieneTests(unittest.TestCase):
             with self.subTest(readme=name):
                 self.assertIn(f"](<{image_path}>)", (ROOT / name).read_text(encoding="utf-8"))
 
+    def test_large_illustration_stays_out_of_distributions(self):
+        """2 MB 级配图只在仓库/网页中提供，不进入 sdist 与 wheel。"""
+        self.assertNotIn(
+            "surge-workflow.png", (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        )
+        self.assertNotIn(
+            "surge-workflow.png", (ROOT / "scripts" / "verify_release.py").read_text(encoding="utf-8")
+        )
+
     def test_fixture_manifest_has_provenance_and_license_status(self):
         manifest = json.loads((ROOT / "tests" / "fixtures" / "finqa" / "MANIFEST.json").read_text(encoding="utf-8"))
         for field in ("source_url", "revision", "split", "fixture_sha256", "record_ids", "license_status", "attribution"):

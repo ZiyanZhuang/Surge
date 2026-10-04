@@ -1,4 +1,4 @@
-# 浪潮模式：本地高并发科研 Agent 集群设计
+# 浪潮模式：单机科研 Agent DAG 调度设计
 
 ## 1. 目标与边界
 
@@ -12,19 +12,23 @@
 DSH Client UI
   └─ 选择 agent preset：浪潮模式
        └─ DSH preset（persona + tools + subagent/workflow）
-            └─ Host WorkerAdapter（待接入真实 DSH Agent/LLM）
+            └─ 执行入口：dsh-surge-run（JSON 计划 → DAGScheduler）
+                 └─ WorkerAdapter
+                      ├─ HttpWorkerAdapter（Anthropic-compatible Messages SSE，fail-closed）
+                      ├─ LocalEchoAdapter（离线）
+                      └─ 待接入：DSH Host Agent/LLM 直接 bridge
                  └─ DAGScheduler
                       ├─ SQLite：runs/nodes/attempts/events/ledger
                       ├─ bounded ThreadPoolExecutor
                       ├─ wave gate：Scout → Deepen → Verify → Synthesize
                       ├─ demand-aware stage caps / incremental dispatch
-                       ├─ task-demand route selection（模型/强度/预算/容量）
-                       ├─ retry/timeout/lease heartbeat/recovery
+                      ├─ task-demand route selection（模型/强度/预算/容量）
+                      ├─ retry/timeout/lease heartbeat/recovery
                       ├─ budget reservation + settlement
                       └─ ArtifactStore：SHA-256 + 原子提交
 ```
 
-Preset 只负责模式组合、提示词和调用约束；调度器负责并发、状态、预算和证据完整性。两者通过 `WorkerAdapter.run(node, context) -> WorkerResult` 解耦。
+Preset 只负责模式组合、提示词和调用约束；`dsh-surge-run` 负责把 JSON 计划交给调度器；调度器负责并发、状态、预算和证据完整性。它们通过 `WorkerAdapter.run(node, context) -> WorkerResult` 解耦。缺少 `dsh-surge-run` 时，preset 中的波次与闸门只是提示词约定，不会有代码检查。
 
 ## 3. 任务协议
 
@@ -108,7 +112,7 @@ nodes = [
 
 ## 6. 验证证据
 
-测试覆盖（当前 60 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 8 项真实 adapter 安全/调度 harness 单测 + 4 项发布卫生单测）：
+测试覆盖（当前 96 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 8 项真实 adapter 烟测 harness 单测 + 20 项库内 HTTP adapter 单测 + 14 项 CLI/计划单测 + 6 项发布卫生单测）：
 
 1. 32 节点扇出、`max_workers=8`，确认实际并发不越界。
 2. 依赖缺失、环检测。
@@ -119,6 +123,8 @@ nodes = [
 7. stage `max_in_flight`/`dispatch_batch`、按 task class 路由及 `target_progress` 增量 defer。
 8. timeout 槽位保留且重试不与旧 future 重叠、heartbeat 延长、运行中取消、预算结算、持久化事件和输入数值校验。
 9. 同一 scheduler 的 run 重入拦截、终态 execute 幂等，以及平台无关的 hash 派生 artifact 目录。
+10. `HttpWorkerAdapter`：请求上限取策略与节点上限的较小值、usage 驱动成本、取消前不派发、租约被拒即失败、响应超限时保存摘要与哈希而不是静默截断、artifact 与调用证据都不包含 prompt 正文。
+11. `dsh-surge-run`：离线 `--dry-run` 不触碰 endpoint、真实模式必须显式给出 `--endpoint`、计划未知字段/重复 id/悬空依赖/schema 版本被拒绝、失败节点与下游 blocked 的退出码与报告字段、stdout 保持 ASCII。
 
 运行命令：
 
@@ -133,7 +139,7 @@ python -m unittest discover -s tests -v
 
 ### P1：真实 DSH Host adapter
 
-把已确认的 Agent/LLM 调用契约封装为 `WorkerAdapter`；透传 run/node/attempt id、取消信号、usage 和错误分类。先做单 Host 集成测试，不猜测未 Inspect 的 Service API。
+本地 Messages SSE 适配器已经是一等公民（`surge_cluster.http_adapter`），并配有 `dsh-surge-run` 执行入口。本阶段剩下的是把 DSH Host 已确认的 Agent/LLM 调用契约直接封装为 `WorkerAdapter`：透传 run/node/attempt id、取消信号、usage 和错误分类，先做单 Host 集成测试，不猜测未 Inspect 的 Service API。当前 `AdapterFailure` 已带 `kind`/`retryable`，但调度器仍对任何异常按 `max_attempts` 重试，尚未按 kind 分流。
 
 ### P2：进程级隔离与资源池
 
@@ -149,7 +155,8 @@ python -m unittest discover -s tests -v
 
 ## 8. 当前明确限制
 
-- 核心调度器不内置真实模型调用；仓库另有显式 opt-in 的本地 reverse-proxy adapter 烟测，并不等于直接 DSH `llm` Service bridge。
+- 核心调度器不内置模型调用；真实调用由 `dsh-surge-run` 与 `surge_cluster.HttpWorkerAdapter` 显式发起，需要已授权的 Messages endpoint，并且不等于直接 DSH `llm` Service bridge。
+- 当前唯一跑通的真实数据集是 FinQA 财务问答；科研领域任务、多案例并发和 provider 容量都还没有实测结论。
 - 没有跨进程/跨主机资源调度、GPU 感知、分布式锁或对象存储；当前增量派发仍基于已提交 DAG 节点，动态 Producer/streaming source 还未接入。
 - 当前验证器是确定性 envelope/evidence 检查；独立科学 verifier 仍是下一阶段 adapter。
 - SQLite 适合本地 MVP；高写入、多 Host 场景必须通过基准测试后再升级存储层。

@@ -6,11 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "dsh-surge-mode"
 version = "0.1.0"
 description = "Single-host bounded-concurrency scientific Agent DAG scheduler"
-readme = "README.zh-CN.md"
+readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{name = "DSH Surge Mode contributors"}]
+keywords = ["agent-orchestration", "dag-scheduler", "llm-agents", "sqlite", "budget-control"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -18,8 +19,14 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ZiyanZhuang/Surge"
+Repository = "https://github.com/ZiyanZhuang/Surge"
+Issues = "https://github.com/ZiyanZhuang/Surge/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -31,16 +38,17 @@ dsh-surge-benchmark = "benchmark_64:main"
 dsh-surge-real-smoke = "benchmark_real_smoke:main"
 dsh-surge-select-finqa = "select_finqa_fixture:main"
 dsh-surge-real-adapter-smoke = "benchmark_real_adapter_smoke:main"
+dsh-surge-run = "run_dag:main"
 
 [tool.setuptools]
 packages = ["surge_cluster"]
-py-modules = ["benchmark_64", "benchmark_real_smoke", "benchmark_real_adapter_smoke", "select_finqa_fixture"]
+py-modules = ["benchmark_64", "benchmark_real_smoke", "benchmark_real_adapter_smoke", "select_finqa_fixture", "run_dag"]
 
 [tool.setuptools.data-files]
 "." = ["README.md", "README.zh-CN.md", "DESIGN.zh-CN.md", "BENCHMARKS.zh-CN.md", "SMOKE-TEST-PLAN.zh-CN.md", "PHILOSOPHY.md", "PHILOSOPHY.zh-CN.md", "PHILOSOPHY-DIAGRAM-PROMPT.zh-CN.md", "CONTRIBUTING.zh-CN.md", "THIRD_PARTY_NOTICES.md", "preset-langchao.patch.yml", "LICENSE"]
 "docs" = ["docs/QUICKSTART.zh-CN.md", "docs/ADAPTER-CONTRACT.zh-CN.md"]
-"docs/assets" = ["docs/assets/surge-workflow.png"]
-"tests" = ["tests/test_core.py", "tests/test_finqa.py", "tests/test_real_smoke.py", "tests/test_select_finqa.py", "tests/test_real_adapter_smoke.py", "tests/test_release_hygiene.py"]
+# README 中的工作流配图体积较大，只在仓库与网页中提供，不进入 sdist/wheel。
+"tests" = ["tests/test_core.py", "tests/test_finqa.py", "tests/test_real_smoke.py", "tests/test_select_finqa.py", "tests/test_real_adapter_smoke.py", "tests/test_http_adapter.py", "tests/test_run_dag.py", "tests/test_release_hygiene.py"]
 "tests/fixtures/finqa" = ["tests/fixtures/finqa/smoke.jsonl", "tests/fixtures/finqa/MANIFEST.json", "tests/fixtures/finqa/README.md"]
 "benchmark-results" = [
     "benchmark-results/benchmark-64.json",

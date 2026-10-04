@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "description": "Minimal four-wave plan. Validate offline first: python run_dag.py --plan examples/plan.example.json --output report.json --dry-run",
+  "run": {
+    "id": "example-four-wave",
+    "budget_cost": 5.0,
+    "max_workers": 2,
+    "deadline_seconds": 600,
+    "cost_per_1k_tokens": 0.01
+  },
+  "nodes": [
+    {
+      "id": "scout-a",
+      "prompt": "Collect the primary sources that bear on the question; cite each source.",
+      "wave": 0,
+      "stage": "scout",
+      "max_tokens": 6000,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "scout-b",
+      "prompt": "Collect counterexamples and known limitations for the same question.",
+      "wave": 0,
+      "stage": "scout",
+      "max_tokens": 6000,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "deepen",
+      "prompt": "Analyze the collected evidence and mark the gaps that remain.",
+      "wave": 1,
+      "stage": "deepen",
+      "depends_on": ["scout-a", "scout-b"],
+      "max_tokens": 6000,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "verify",
+      "prompt": "Check each claim against its cited evidence and look for contradictions.",
+      "wave": 2,
+      "stage": "verify",
+      "depends_on": ["deepen"],
+      "max_tokens": 6000,
+      "timeout_seconds": 120
+    },
+    {
+      "id": "synthesize",
+      "prompt": "Summarize only the claims that passed verification; keep the citations.",
+      "wave": 3,
+      "stage": "synthesize",
+      "depends_on": ["verify"],
+      "max_tokens": 6000,
+      "timeout_seconds": 120
+    }
+  ]
+}
