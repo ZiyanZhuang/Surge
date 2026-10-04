@@ -14,6 +14,8 @@ DSH Client UI
        └─ DSH preset（persona + tools + subagent/workflow）
             └─ 执行入口：dsh-surge-run（JSON 计划 → DAGScheduler）
                  └─ WorkerAdapter
+                      ├─ VerifyingAdapter（独立验证：只标注，不改写）
+                      ├─ IsolatedAdapter（子进程硬超时 + 物理并发上界）
                       ├─ HttpWorkerAdapter（Anthropic-compatible Messages SSE，fail-closed）
                       ├─ LocalEchoAdapter（离线）
                       └─ 待接入：DSH Host Agent/LLM 直接 bridge
@@ -25,10 +27,13 @@ DSH Client UI
                       ├─ task-demand route selection（模型/强度/预算/容量）
                       ├─ retry/timeout/lease heartbeat/recovery
                       ├─ budget reservation + settlement
-                      └─ ArtifactStore：SHA-256 + 原子提交
+                      ├─ ArtifactStore：SHA-256 + 原子提交
+                      └─ 只读审计面：snapshot / artifacts / read_artifact / events / budget_snapshot
 ```
 
 Preset 只负责模式组合、提示词和调用约束；`dsh-surge-run` 负责把 JSON 计划交给调度器；调度器负责并发、状态、预算和证据完整性。它们通过 `WorkerAdapter.run(node, context) -> WorkerResult` 解耦。缺少 `dsh-surge-run` 时，preset 中的波次与闸门只是提示词约定，不会有代码检查。
+
+验证与隔离的组合顺序固定为：验证在父进程内，隔离只包住模型调用。验证需要读取已提交 artifact 的正文，而回调无法跨进程传递；隔离层只承诺"一次调用被硬超时与物理并发约束"。上下文中的 `read_artifact` 因此不进入子进程。
 
 ## 3. 任务协议
 
@@ -112,7 +117,7 @@ nodes = [
 
 ## 6. 验证证据
 
-测试覆盖（当前 96 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 8 项真实 adapter 烟测 harness 单测 + 20 项库内 HTTP adapter 单测 + 14 项 CLI/计划单测 + 6 项发布卫生单测）：
+测试覆盖（当前 134 项：33 项调度器回归 + 5 项 FinQA oracle 单测 + 2 项离线烟测 harness 单测 + 8 项 fixture 选择器单测 + 8 项真实 adapter 烟测 harness 单测 + 20 项库内 HTTP adapter 单测 + 8 项进程隔离单测 + 20 项验证与 provenance 单测 + 9 项 Gate C harness 单测 + 14 项 CLI/计划单测 + 7 项发布卫生单测）：
 
 1. 32 节点扇出、`max_workers=8`，确认实际并发不越界。
 2. 依赖缺失、环检测。
@@ -125,6 +130,8 @@ nodes = [
 9. 同一 scheduler 的 run 重入拦截、终态 execute 幂等，以及平台无关的 hash 派生 artifact 目录。
 10. `HttpWorkerAdapter`：请求上限取策略与节点上限的较小值、usage 驱动成本、取消前不派发、租约被拒即失败、响应超限时保存摘要与哈希而不是静默截断、artifact 与调用证据都不包含 prompt 正文。
 11. `dsh-surge-run`：离线 `--dry-run` 不触碰 endpoint、真实模式必须显式给出 `--endpoint`、计划未知字段/重复 id/悬空依赖/schema 版本被拒绝、失败节点与下游 blocked 的退出码与报告字段、stdout 保持 ASCII。
+12. `IsolatedAdapter`：结果跨进程往返、不合作 worker 被硬超时终止、取消会终止子进程、内层失败保留 `kind`、不可 JSON 化的 envelope 在边界内失败、`max_processes=1` 时子进程时间区间不重叠、逐次调用证据能带回父进程。
+13. `EvidenceVerifier` 与 `build_provenance`：缺证据、悬空引用、自引用、答案不在证据中、不可读引用的严重级别、内容被篡改时的 digest 不一致、claim 层缺失时如实声明 `claims_available=false`。
 
 运行命令：
 
@@ -143,11 +150,11 @@ python -m unittest discover -s tests -v
 
 ### P2：进程级隔离与资源池
 
-把线程 worker 替换为受控进程池；按模型、GPU、CPU、内存建立 semaphore/resource class，增加每类并发配额和 admission control。
+单次调用的进程级硬隔离已经实现为 `surge_cluster.IsolatedAdapter`：它包装任意 `WorkerAdapter`，用子进程执行、按 `max_processes` 限制物理并发、用 terminate/kill 实施硬超时，并把逐次调用证据带回父进程。调度器本身不变，因此 DAG、预算、租约、重试和 artifact 语义原样继承。剩余工作是把"一个调用一个进程"升级为受控资源池：按模型、GPU、CPU、内存划分 resource class，增加每类并发配额与 admission control，并复用同一进程池而不是每次新建。
 
 ### P3：可观测性与科研校验
 
-增加 verifier adapter、claim provenance 图、结构化指标（队列等待、token、成本、重试率、波次通过率）和审计导出。验证器只能给出 pass/fail/score/issues，不能静默修改原始结果。
+确定性验证器与 provenance 已经实现：`EvidenceVerifier` 检查证据缺失、悬空引用、自引用与答案一致性，`build_provenance` 从只读审计接口重建 node/artifact/claim 图并报告 digest 不一致等完整性发现；`VerifyingAdapter` 只标注、不改写结果。剩余工作是模型侧 verifier adapter（必须同样只输出 pass/fail/score/issues）、结构化指标导出（队列等待、token、成本、重试率、波次通过率）以及把 envelope 落库，使 claim 层 provenance 在运行结束后也能重建。
 
 ### P4：多节点演进
 

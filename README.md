@@ -39,7 +39,7 @@ Read the longer essay in [PHILOSOPHY.md](PHILOSOPHY.md) or [中文哲学文](PHI
 
 ## Current status
 
-The scheduler core, SQLite state, bounded per-run concurrency, four-wave gates, route selection, retries, lease recovery, budget accounting, artifact/evidence validation, offline FinQA replay, the first-class `surge_cluster.HttpWorkerAdapter`, and the `dsh-surge-run` CLI are implemented. Direct Python-to-DSH `llm.stream` integration, real multi-case concurrency validation, process-level hard isolation, and an independent scientific verifier remain future work.
+The scheduler core, SQLite state, bounded per-run concurrency, four-wave gates, route selection, retries, lease recovery, budget accounting, artifact/evidence validation, offline FinQA replay, the first-class `surge_cluster.HttpWorkerAdapter`, the `dsh-surge-run` CLI, process-level isolation (`IsolatedAdapter`), the independent `EvidenceVerifier`, and the read-only audit surface are implemented. Direct Python-to-DSH `llm.stream` integration, a live multi-case concurrency run, model-side verification, and an independent scientific verifier remain future work.
 
 The project targets research workflows, but the only real dataset exercised so far is the FinQA financial question-answering fixture; scientific-domain tasks are unverified. The default test suite is offline; real calls are opt-in, require an explicitly authorized endpoint, and are not part of the default regression run.
 
@@ -71,9 +71,23 @@ python run_dag.py --plan plan.json --output report.json `
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
-Exit codes: `0` all nodes succeeded, `1` a node failed or a downstream node was blocked, `2` an invalid plan or argument. The report carries a UTC timestamp, an environment snapshot, the plan SHA-256, per-node status, budget settlement, and per-call metadata that never includes prompt text. Unknown plan fields, duplicate node ids, and dangling dependencies are rejected rather than silently ignored.
+Exit codes: `0` all nodes succeeded, `1` a node failed or a downstream node was blocked, `2` an invalid plan or argument. The report carries a UTC timestamp, an environment snapshot, the plan SHA-256, per-node status, a budget snapshot, event counts, per-call metadata, and a provenance section; prompt text is never included.
+
+Optional switches: `--isolate` runs every model call in its own worker process (hard timeout via terminate/kill, strict physical concurrency); `--verify annotate|fail|off` adds independent evidence verification, where `fail` makes a failed verification fail the node and block downstream; `--no-provenance` omits the provenance section.
 
 `node.max_tokens` is the per-call budget envelope (input plus output); the actual request ceiling is `min(--max-output-tokens, node.max_tokens)`, and the adapter fails closed when provider-reported output exceeds that ceiling.
+
+## Independent verification and provenance
+
+`EvidenceVerifier` checks each claim for missing evidence, dangling references, self-reference (a claim whose only evidence comes from the node that produced it), and answer/evidence agreement. `VerifyingAdapter` attaches the result under `envelope["verification"]` and appends issues to `warnings`; it never rewrites the answer, the claims, or any artifact. With `policy="fail"` a failed verification fails the node instead.
+
+`build_provenance` rebuilds the node/artifact/claim graph from the read-only audit surface (`snapshot`, `artifacts`, `read_artifact`, `events`, `budget_snapshot`) and reports integrity findings such as digest mismatches. Envelopes are not persisted by the scheduler, so claim-level provenance is available for the current run; rebuilding it after the fact is future work.
+
+## Bounded concurrency against a real endpoint (Gate C)
+
+`benchmark_gate_c.py` submits three FinQA cases as one run with `max_workers=2`, so the third wave-0 node has to wait for a slot. Each case has a real `solve` node and a deterministic `check` node that re-reads the persisted model response and compares it against the frozen oracle. The report includes observed peak concurrency, the budget invariant, heartbeat event counts, per-call metadata, the verification summary, and provenance.
+
+It refuses to run when the estimated input tokens plus the output ceiling would not fit the declared `node.max_tokens`, so a run cannot silently die mid-way on the hard budget. Gate C has not been executed against a live endpoint yet: it needs an operator-started, authorized Anthropic-compatible endpoint.
 
 ## Preset versus executor
 
@@ -99,7 +113,7 @@ See [docs/QUICKSTART.zh-CN.md](docs/QUICKSTART.zh-CN.md) for the minimal DAG and
 
 - Single host by design; SQLite is suitable for a local MVP, not a distributed task queue.
 - Recovery is **at-least-once**, not exactly-once.
-- Python thread timeouts are cooperative; use process isolation for hard physical limits.
+- Python thread timeouts are cooperative by default; use `--isolate` (or `IsolatedAdapter`) for hard timeouts, which terminate the worker process.
 - Offline replay validates orchestration and evidence semantics, not general model quality or provider capacity.
 - A request `max_tokens` value is not a physical upstream guarantee. The included real adapter fails closed when provider usage is missing or above the requested limit, but an upstream reverse proxy may ignore the request field.
 - The local scheduler benchmark measures a synthetic `sleep`-shaped workload. Its throughput number is a machine-dependent observation, not a capability metric.

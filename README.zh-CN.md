@@ -60,7 +60,11 @@
 - 同一 SQLite run 的 owner lease 防止重复执行；当前实现面向单机 MVP，分布式队列仍在后续演进范围内
 - `RunResult.blocked` 为兼容性聚合，同时包含节点 `blocked` 与 `cancelled`；需区分二者请读取 `snapshot()`
 - `surge_cluster.HttpWorkerAdapter`：Anthropic-compatible Messages SSE 适配器，在 HTTP/SSE 不完整、`usage` 缺失、输出超过本次请求上限、响应字节超限、空输出、取消后迟到提交等情况下 fail-closed，并记录不含 prompt 正文的逐次调用证据
-- `dsh-surge-run`：读取 JSON 任务计划，离线校验（`--dry-run`）或经授权 endpoint 真实执行，输出含 UTC 时间戳、环境快照、计划摘要和逐节点状态的报告
+- `dsh-surge-run`：读取 JSON 任务计划，离线校验（`--dry-run`）或经授权 endpoint 真实执行，输出含 UTC 时间戳、环境快照、计划摘要、逐节点状态、预算快照、事件计数和 provenance 的报告
+- `IsolatedAdapter`：把任意 adapter 的每次调用放进独立子进程，提供硬超时（terminate/kill）与严格物理并发上界，并把逐次调用证据带回父进程
+- `EvidenceVerifier` 与 `VerifyingAdapter`：独立检查证据缺失、悬空引用、自引用与答案一致性；只标注不改写，`fail` 策略会让验证失败的节点失败并阻断下游
+- `build_provenance`：从只读审计接口重建 node/artifact/claim 图，报告 digest 不一致等完整性发现
+- 只读审计面：`snapshot`、`artifacts`、`read_artifact`、`events`、`budget_snapshot`，用于外部复核而不参与调度决策
 
 内部 `wave` 从 0 开始（`wave=0` 是用户概念中的 Wave 1/Scout），后续为 `wave=1/2/3`；preset 的自然语言 Wave 1–4 不改变这一内部编号。
 

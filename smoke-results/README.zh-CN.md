@@ -44,7 +44,11 @@ python benchmark_real_smoke.py `
   --workdir smoke-runs
 ```
 
-当前回归套件：**96 项全部通过**，其中 20 项是库内 `HttpWorkerAdapter` 单测、14 项是 `dsh-surge-run` CLI 与计划加载单测、6 项是发布卫生测试。
+当前回归套件：**134 项全部通过**，其中 20 项是库内 `HttpWorkerAdapter` 单测、8 项进程隔离、20 项验证与 provenance、9 项 Gate C harness、14 项 `dsh-surge-run` CLI 与计划加载、7 项发布卫生测试。
+
+## Gate C 状态
+
+Gate C 的 harness（`benchmark_gate_c.py`）已经就绪并有离线回环测试覆盖：三案例、`max_workers=2`、预算 preflight、峰值并发与预算不变量统计、heartbeat 事件计数、逐次调用明细、独立 check 节点与 provenance。**真实 Gate C 尚未执行**：它需要一个由操作者显式启动并授权的本地 Anthropic-compatible endpoint；本机 127.0.0.1:17800 当前没有在监听，因此在反代启动前不会产生任何真实案例结果。
 
 ## 边界与风险
 

@@ -94,3 +94,35 @@ adapter = HttpWorkerAdapter(
 - 响应超过 `max_artifact_bytes` 时保存摘要与摘要哈希，不做静默截断，并在 envelope 的 `warnings` 中标注。
 
 执行入口是 `dsh-surge-run`（`run_dag.py`）：读取 JSON 计划，`--dry-run` 离线校验，真实模式必须显式给出 `--endpoint`。`node.max_tokens` 在计划里表示单次调用的预算预留上限（输入+输出），报告会记录这一口径。
+
+## 组合顺序：验证在外，隔离在内
+
+两个可选装饰器保持同一 `WorkerAdapter` 协议，因此可以和任何适配器组合：
+
+```python
+adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标注
+    IsolatedAdapter(model_adapter,        # 2. 子进程硬超时 + 物理并发上界
+                   max_processes=2),
+    verifier=EvidenceVerifier(require_content=True),
+    policy="annotate",                    # 或 "fail"：验证失败即让节点失败
+)
+```
+
+顺序有明确理由：验证要读取已提交 artifact 的正文，而回调无法跨进程，所以验证留在父进程；隔离层只承诺"一次调用被硬超时与物理并发约束"。
+
+* `IsolatedAdapter`：子进程执行，`max_processes` 限制同时存活的子进程数，硬超时 = `node.timeout_seconds + hard_timeout_grace`，超时或取消时 terminate→join→kill。跨进程只转发可序列化上下文（run/attempt/wave/stage/progress/route/artifacts），`read_artifact`、`heartbeat` 等回调由父进程代理：子进程通过单向控制队列上报 heartbeat/progress，授权仍由调度器 CAS 决定，因此迟到的子进程结果不会被提交。内层 adapter 的 `calls` 明细会随结果带回父进程。
+* `VerifyingAdapter`：`policy="annotate"` 只把 `verification` 与 `warnings` 附加到 envelope；`policy="fail"` 在验证失败时抛出 `AdapterFailure(kind="verification")`，让节点失败并阻断下游。两种策略都不修改原 envelope 字段与 artifact 正文。
+
+## 只读审计面
+
+调度器提供五个只读方法，供验证器、Gate 脚本和外部审计使用；它们不改变任何状态，也不参与调度决策：
+
+| 方法 | 用途 |
+|---|---|
+| `snapshot(run_id)` | 逐节点状态、attempt 次数、错误、阶段与进度 |
+| `artifacts(run_id, node_id=None)` | 已提交的 artifact 绑定（node/name/ref/sha256） |
+| `read_artifact(run_id, ref)` | 读取并校验 artifact 正文（digest 与路径越界都会抛错） |
+| `events(run_id, prefix=None)` | 事件流，可按 `task.heartbeat` 等前缀过滤 |
+| `budget_snapshot(run_id)` | `spent + reserved <= budget` 不变量的对外快照与账本汇总 |
+
+adapter 在运行期还可以使用 `context["read_artifact"](ref)` 读取依赖证据；该回调只在父进程内可用。

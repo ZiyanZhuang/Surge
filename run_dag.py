@@ -27,12 +27,16 @@ from typing import Any
 
 from surge_cluster import (
     DAGScheduler,
+    EvidenceVerifier,
     HttpWorkerAdapter,
+    IsolatedAdapter,
     LocalEchoAdapter,
     NodeSpec,
     PlanError,
     RunPlan,
     RunSpec,
+    VerifyingAdapter,
+    build_provenance,
     extract_numeric_answer,
     load_plan,
 )
@@ -82,6 +86,23 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout", type=float, default=120.0, help="per-request timeout in seconds")
     parser.add_argument("--max-output-tokens", type=int, default=2000)
     parser.add_argument("--cost-per-1k-tokens", type=float, default=None)
+    parser.add_argument(
+        "--isolate",
+        action="store_true",
+        help="run each model call in its own worker process (hard timeout, strict concurrency)",
+    )
+    parser.add_argument(
+        "--verify",
+        choices=("annotate", "fail", "off"),
+        default="annotate",
+        help="independent evidence verification policy for every node",
+    )
+    parser.add_argument(
+        "--no-provenance",
+        dest="provenance",
+        action="store_false",
+        help="omit the claim/artifact provenance section from the report",
+    )
     parser.add_argument("--workdir", type=Path, default=None, help="persist SQLite state and artifacts here")
     return parser
 
@@ -104,29 +125,44 @@ def _runtime_specs(plan: RunPlan, args: argparse.Namespace) -> tuple[RunSpec, li
     return run_spec, list(plan.nodes)
 
 
-def _build_adapter(args: argparse.Namespace, run_spec: RunSpec) -> tuple[Any, dict[str, Any] | None]:
+def _build_adapter(args: argparse.Namespace, run_spec: RunSpec):
+    """组合顺序：模型调用 -> 可选进程隔离 -> 可选验证。
+
+    验证放在隔离之外，因此它在父进程内运行，可以读取已提交的 artifact 正文；
+    隔离层的子进程只负责一次模型调用。
+    """
     if args.dry_run:
-        return LocalEchoAdapter(), None
-    adapter = HttpWorkerAdapter(
-        args.endpoint,
-        args.model,
-        timeout=args.timeout,
-        max_output_tokens=args.max_output_tokens,
-        cost_per_1k_tokens=(
-            run_spec.cost_per_1k_tokens if args.cost_per_1k_tokens is None else args.cost_per_1k_tokens
-        ),
-        answer_extractor=extract_numeric_answer,
-        warning="one authorized model call through the CLI; not a capacity or quality claim",
-    )
-    meta = {
-        "endpoint": args.endpoint,
-        "model": args.model,
-        "timeout_seconds": args.timeout,
-        "request_max_tokens_ceiling": args.max_output_tokens,
-        "cost_per_1k_tokens": adapter.cost_per_1k_tokens,
-        "transport": "Anthropic Messages SSE; authorized local reverse proxy or compatible endpoint",
-        "api_key_placeholder": adapter.api_key,
-    }
+        inner: Any = LocalEchoAdapter()
+        meta: dict[str, Any] | None = None
+    else:
+        http_adapter = HttpWorkerAdapter(
+            args.endpoint,
+            args.model,
+            timeout=args.timeout,
+            max_output_tokens=args.max_output_tokens,
+            cost_per_1k_tokens=(
+                run_spec.cost_per_1k_tokens if args.cost_per_1k_tokens is None else args.cost_per_1k_tokens
+            ),
+            answer_extractor=extract_numeric_answer,
+            warning="one authorized model call through the CLI; not a capacity or quality claim",
+        )
+        inner = http_adapter
+        meta = {
+            "endpoint": args.endpoint,
+            "model": args.model,
+            "timeout_seconds": args.timeout,
+            "request_max_tokens_ceiling": args.max_output_tokens,
+            "cost_per_1k_tokens": http_adapter.cost_per_1k_tokens,
+            "transport": "Anthropic Messages SSE; authorized local reverse proxy or compatible endpoint",
+            "api_key_placeholder": http_adapter.api_key,
+            "isolated": bool(args.isolate),
+        }
+    if args.isolate and not args.dry_run:
+        inner = IsolatedAdapter(inner, max_processes=run_spec.max_workers)
+    if args.verify == "off":
+        return inner, meta
+    verifier = EvidenceVerifier(require_content=True, require_answer_in_evidence=True)
+    adapter = VerifyingAdapter(inner, verifier=verifier, policy=args.verify)
     return adapter, meta
 
 
@@ -158,6 +194,13 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path]:
             scheduler.submit(run_spec, nodes)
             result = scheduler.execute(adapter)
             nodes_snapshot = scheduler.snapshot(run_spec.id)
+            budget = scheduler.budget_snapshot(run_spec.id)
+            event_counts: dict[str, int] = {}
+            for event in scheduler.events(run_spec.id):
+                event_counts[event["event"]] = event_counts.get(event["event"], 0) + 1
+            provenance = (
+                build_provenance(scheduler, run_spec.id).as_dict() if args.provenance else None
+            )
     finally:
         if temporary:
             shutil.rmtree(workdir, ignore_errors=True)
@@ -190,11 +233,17 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path]:
             "spent_cost": result.spent_cost,
         },
         "nodes": nodes_snapshot,
+        "budget": budget,
+        "event_counts": event_counts,
+        "provenance": provenance,
         "limitations": LIMITATIONS,
     }
-    calls = getattr(adapter, "calls", None)
+    calls = getattr(adapter, "calls", None) or getattr(getattr(adapter, "inner", None), "calls", None)
     if calls:
         report["adapter_calls"] = calls
+    summary = getattr(adapter, "verification_report", None)
+    if callable(summary):
+        report["verification"] = summary()
     return (0 if result.status == "succeeded" else 1), report, args.output
 
 

@@ -74,11 +74,35 @@ python run_dag.py --plan plan.json --output report.json `
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
-退出码 `0` 表示全部成功，`1` 表示有节点失败或下游 blocked，`2` 表示计划或参数不合法。报告含 UTC 时间戳、环境快照、计划 SHA-256、逐节点状态和逐次调用元数据，不包含 prompt 正文。
+退出码 `0` 表示全部成功，`1` 表示有节点失败或下游 blocked，`2` 表示计划或参数不合法。报告含 UTC 时间戳、环境快照、计划 SHA-256、逐节点状态、预算快照、事件计数、逐次调用元数据和 provenance，不包含 prompt 正文。
+
+可选开关：
+
+- `--isolate`：每次模型调用放进独立子进程，获得硬超时与严格物理并发（超时会被 terminate/kill）；
+- `--verify annotate|fail|off`：是否对每个节点做独立证据验证；`fail` 会让验证失败的节点失败并阻断下游；
+- `--no-provenance`：报告省略 claim/artifact provenance 段。
 
 计划的 `schema_version` 必须为 `1`；未知字段、重复 id、悬空依赖和 `max_nodes` 小于节点数都会被拒绝。`node.max_tokens` 是单次调用的预算预留上限（输入+输出），真实请求的输出上限为 `min(--max-output-tokens, node.max_tokens)`。
 
-## 5. 运行真实模型烟测（显式选择）
+## 5. Gate C：三案例真实并发烟测
+
+只有在你明确授权、并且本地反代已经运行时才执行：
+
+```powershell
+python benchmark_gate_c.py `
+  --fixture tests\fixtures\finqa\smoke.jsonl `
+  --manifest tests\fixtures\finqa\MANIFEST.json `
+  --endpoint http://127.0.0.1:17800/v1/messages `
+  --model gpt-6.1-sol `
+  --cases 3 --max-workers 2 `
+  --output smoke-results\gate-c.json
+```
+
+每个案例两个节点：`caseN/solve` 真实调用模型，`caseN/check` 只读已落盘的响应，用冻结的 FinQA oracle 独立复核。脚本在花钱之前先做预算口径 preflight（估算输入 token + 输出上限是否落在 `--node-max-tokens` 内），并在报告中给出实测峰值并发、预算不变量、heartbeat 事件数、逐次调用明细、验证结论和 provenance。加 `--isolate` 可把模型调用换成子进程硬隔离。
+
+Gate C 的结论只在"这三个案例在这条 endpoint 上完成"这一层成立，不构成 provider 容量、模型质量或多案例稳定性证明。
+
+## 6. 运行真实模型烟测（显式选择）
 
 真实调用不是默认测试，需要一个已经授权的 Anthropic-compatible 本地适配器：
 
@@ -94,11 +118,11 @@ python benchmark_real_adapter_smoke.py `
 
 请求中的 `max_tokens=2000` 仍不等于上游服务的物理硬限制；如果反代不转发该字段，脚本只能依据 provider 返回的 usage 拒绝超限结果。
 
-## 6. 非目标
+## 7. 非目标
 
 - 跨机器队列、Kubernetes 调度器与 GPU 资源管理器都不在范围内；
 - 不自动创建 DSH Agent/LLM bridge；
 - 不把离线回放当作模型能力证明；
 - 不保证 exactly-once；
-- Python 线程超时是协作式的，硬隔离需要进程 worker；
+- 默认线程路径的超时是协作式的；需要硬超时请加 `--isolate`，它用子进程 terminate/kill 实现；
 - `benchmark_64.py` 的吞吐数字来自本地 synthetic `sleep` 负载，属于机器相关的观测值，不能当作调度器能力或容量指标。

@@ -99,6 +99,22 @@ python -m unittest discover -s tests -v
 
 Gate B 通过后再运行 3 个案例、`max_workers=2`，验证真实 provider 下的预算 reservation、heartbeat、超时、重试和 route capacity。该阶段仍不构成 64-agent 真实模型容量承诺。
 
+harness 已实现为 `benchmark_gate_c.py`，并有离线回环测试覆盖（`tests/test_gate_c.py`）。它在同一次 run 内提交 3 个案例：每个案例一个真实 `caseN/solve` 节点和一个确定性 `caseN/check` 节点（只读已落盘响应并与冻结 oracle 对比），因此 wave 0 的第三个节点必须等待并发槽位。运行前会做预算口径 preflight，估算输入 token 加输出上限必须落在 `--node-max-tokens` 之内：
+
+```powershell
+python benchmark_gate_c.py `
+  --fixture tests\fixtures\finqa\smoke.jsonl `
+  --manifest tests\fixtures\finqa\MANIFEST.json `
+  --endpoint http://127.0.0.1:17800/v1/messages `
+  --model gpt-6.1-sol `
+  --cases 3 --max-workers 2 `
+  --output smoke-results\gate-c.json
+```
+
+报告包含实测峰值并发、预算不变量、heartbeat 事件计数、逐次调用明细、独立 check 结论和 provenance。加 `--isolate` 可让每次模型调用进入独立子进程，获得硬超时。
+
+**执行状态**：真实 Gate C 尚未运行。它需要一个由操作者显式启动并授权的本地 Anthropic-compatible endpoint；在此之前的探测结果是 127.0.0.1:17800 未监听，因此没有可复核的真实案例数据。
+
 ## 暂不纳入首轮
 
 SWE-bench 需要仓库 checkout、补丁应用和测试执行，适合作为后续代码修复 agent 专项烟测，而非首轮科研证据 DAG 烟测。参考：[SWE-bench Quick Start](https://www.swebench.com/SWE-bench/guides/quickstart/)。
