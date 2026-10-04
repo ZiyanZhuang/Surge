@@ -139,6 +139,70 @@ class RunResult:
     deferred: tuple[str, ...] = ()
 
 
+MAX_PERSISTED_ENVELOPE_BYTES = 262_144
+
+
+def encode_envelope_record(envelope: Any, *, max_bytes: int = MAX_PERSISTED_ENVELOPE_BYTES) -> str:
+    """把 envelope 编码为可落库的 JSON 文本，超限时降级为保留 claim 的投影。
+
+    与 artifact 处理遵循同一原则：不做静默截断。超过上限时写入带哈希的
+    ``persisted="projection"`` 记录，保留 ``claims`` 等结构化字段（provenance 需要），
+    把体积大的 ``answer`` 换成 digest，并在 ``warnings`` 中标注。
+
+    这样做的理由是 claim→artifact 的边依赖 claims 的完整引用；若只为省空间丢掉
+    claims，运行结束后的 provenance 就再也建不起来。
+    """
+    try:
+        text = json.dumps(envelope, ensure_ascii=False, allow_nan=False, sort_keys=True)
+    except (TypeError, ValueError) as exc:
+        return json.dumps(
+            {
+                "persisted": "unavailable",
+                "reason": f"envelope is not JSON serializable: {exc}",
+                "repr_sha256": hashlib.sha256(repr(envelope).encode("utf-8")).hexdigest(),
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+    data = text.encode("utf-8")
+    if len(data) <= max_bytes:
+        return text
+    mapping = envelope if isinstance(envelope, Mapping) else {}
+    answer = mapping.get("answer")
+    warnings = mapping.get("warnings")
+    projection = {
+        "persisted": "projection",
+        "reason": "envelope exceeds persisted limit; bulky fields replaced by digests",
+        "limit_bytes": max_bytes,
+        "envelope_bytes": len(data),
+        "envelope_sha256": hashlib.sha256(data).hexdigest(),
+        "answer": None,
+        "answer_sha256": (
+            hashlib.sha256(answer.encode("utf-8")).hexdigest() if isinstance(answer, str) else None
+        ),
+        "answer_chars": len(answer) if isinstance(answer, str) else None,
+        "claims": mapping.get("claims") if isinstance(mapping.get("claims"), list) else [],
+        "citations": mapping.get("citations") if isinstance(mapping.get("citations"), list) else [],
+        "confidence": mapping.get("confidence") if isinstance(mapping.get("confidence"), (int, float)) else None,
+        "warnings": (list(warnings) if isinstance(warnings, list) else [])
+        + ["envelope persisted as a projection; answer stored as digest only"],
+        "usage": mapping.get("usage") if isinstance(mapping.get("usage"), Mapping) else {},
+    }
+    projected = json.dumps(projection, ensure_ascii=False, allow_nan=False, sort_keys=True)
+    if len(projected.encode("utf-8")) <= max_bytes:
+        return projected
+    return json.dumps(
+        {
+            "persisted": "unavailable",
+            "reason": "projection still exceeds persisted limit; claim-level provenance unavailable",
+            "limit_bytes": max_bytes,
+            "envelope_sha256": hashlib.sha256(data).hexdigest(),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+
+
 class AdapterFailure(RuntimeError):
     """适配器 fail-closed 失败；调度器按失败 attempt 记录并计入重试。
 
@@ -526,7 +590,8 @@ class DAGScheduler:
                     started_at REAL NOT NULL,
                     finished_at REAL,
                     error TEXT,
-                    cost REAL NOT NULL DEFAULT 0
+                    cost REAL NOT NULL DEFAULT 0,
+                    envelope TEXT
                 );
                 CREATE TABLE IF NOT EXISTS artifacts (
                     run_id TEXT NOT NULL,
@@ -642,6 +707,7 @@ class DAGScheduler:
             ("attempts", "finished_at", "REAL"),
             ("attempts", "error", "TEXT"),
             ("attempts", "cost", "REAL NOT NULL DEFAULT 0"),
+            ("attempts", "envelope", "TEXT"),
             ("budget_ledger", "id", "INTEGER"),
             ("budget_ledger", "run_id", "TEXT NOT NULL DEFAULT ''"),
             ("budget_ledger", "node_id", "TEXT"),
@@ -671,7 +737,7 @@ class DAGScheduler:
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_attempts_active ON attempts(run_id, status, lease_until)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_artifacts_node ON artifacts(run_id, node_id)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_events_run ON events(run_id, id)")
-        self._conn.execute("PRAGMA user_version=2")
+        self._conn.execute("PRAGMA user_version=3")
         self._conn.commit()
 
     @staticmethod
@@ -1711,11 +1777,14 @@ class DAGScheduler:
                     report = ValidationReport(False, report.errors + ("hard budget exceeded by worker usage",), score=0.0)
 
                 error = "; ".join(report.errors)
+                # 无论验证通过还是失败都落库：失败 attempt 的 envelope 正是审计要看的东西。
+                # 这里不做静默截断，超限时由 encode_envelope_record 写入带哈希的投影。
+                envelope_record = encode_envelope_record(result.envelope)
                 if not report.ok:
                     # 先 CAS 结束 attempt，再结算 reservation；迟到 future 将直接被丢弃。
                     claimed = self._conn.execute(
                         """
-                        UPDATE attempts SET status='failed',finished_at=?,error=?
+                        UPDATE attempts SET status='failed',finished_at=?,error=?,envelope=?
                         WHERE id=? AND run_id=? AND node_id=? AND status='running'
                           AND EXISTS (
                               SELECT 1 FROM nodes
@@ -1723,7 +1792,7 @@ class DAGScheduler:
                           )
                           AND EXISTS (SELECT 1 FROM runs WHERE id=? AND owner_id=?)
                         """,
-                        (time.time(), error, attempt_id, run_id, node.id, run_id, node.id, attempt_id, run_id, self._owner_id),
+                        (time.time(), error, envelope_record, attempt_id, run_id, node.id, run_id, node.id, attempt_id, run_id, self._owner_id),
                     ).rowcount
                     if not claimed:
                         # artifact 表没有 attempt_id；当前事务仍持有 owner/节点锁，
@@ -1756,7 +1825,7 @@ class DAGScheduler:
                 claim_time = time.time()
                 claimed = self._conn.execute(
                     """
-                    UPDATE attempts SET status='succeeded',finished_at=?,cost=?
+                    UPDATE attempts SET status='succeeded',finished_at=?,cost=?,envelope=?
                     WHERE id=? AND run_id=? AND node_id=? AND status='running'
                       AND EXISTS (
                           SELECT 1 FROM runs
@@ -1768,7 +1837,7 @@ class DAGScheduler:
                       )
                       AND EXISTS (SELECT 1 FROM runs WHERE id=? AND owner_id=?)
                     """,
-                    (claim_time, actual, attempt_id, run_id, node.id, run_id, claim_time, run_id, node.id, attempt_id, run_id, self._owner_id),
+                    (claim_time, actual, envelope_record, attempt_id, run_id, node.id, run_id, claim_time, run_id, node.id, attempt_id, run_id, self._owner_id),
                 ).rowcount
                 if not claimed:
                     # deadline/cancel/owner 竞态可能让成功 CAS 失败；不能留下未提交 attempt 的证据绑定。
@@ -1832,6 +1901,41 @@ class DAGScheduler:
     def read_artifact(self, run_id: str, ref: str) -> str:
         """按引用读取 artifact 正文；digest 不匹配或路径越界都会抛错。"""
         return ArtifactStore(self._artifact_root(run_id)).read_text(ref)
+
+    def envelopes(self, run_id: str) -> dict[str, dict[str, Any]]:
+        """按节点返回最近一次带 envelope 的 attempt 记录。
+
+        解析保持 fail-closed 但不抛异常：损坏的行只作为 ``error`` 字段返回，
+        避免一条坏记录中断整次审计。``persisted`` 字段为 ``projection`` 或
+        ``unavailable`` 时表示当时因超限或不可序列化而降级存储。
+        """
+        records: dict[str, dict[str, Any]] = {}
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT node_id,id,number,status,envelope FROM attempts "
+                "WHERE run_id=? AND envelope IS NOT NULL ORDER BY number",
+                (run_id,),
+            )
+            for row in rows:
+                entry: dict[str, Any] = {
+                    "attempt_id": row["id"],
+                    "attempt_number": row["number"],
+                    "status": row["status"],
+                }
+                try:
+                    payload = json.loads(row["envelope"])
+                except (TypeError, ValueError) as exc:
+                    entry.update(
+                        {"envelope": None, "error": f"stored envelope is not valid JSON: {exc}"}
+                    )
+                else:
+                    entry.update({"envelope": payload})
+                    if isinstance(payload, Mapping):
+                        marker = payload.get("persisted")
+                        if isinstance(marker, str):
+                            entry["persisted"] = marker
+                records[row["node_id"]] = entry
+        return records
 
     def events(self, run_id: str, prefix: str | None = None) -> list[dict[str, Any]]:
         """只读审计事件流，可按事件名前缀过滤（例如 ``task.heartbeat``）。"""

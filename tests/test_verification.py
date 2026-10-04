@@ -313,13 +313,24 @@ class ProvenanceTests(unittest.TestCase):
         codes = [finding["code"] for finding in report["findings"]]
         self.assertIn("digest_mismatch", codes)
 
-    def test_claims_absent_is_declared(self) -> None:
+    def test_claims_are_recovered_from_persisted_envelopes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             db, _, _ = self._run_once(directory)
             with DAGScheduler(db, max_workers=1) as scheduler:
                 report = build_provenance(scheduler, "prov").as_dict()
+        self.assertTrue(report["claims_available"])
+        self.assertEqual(report["envelope_source"], "persisted")
+        self.assertEqual(report["claim_count"], 1)
+
+    def test_missing_envelope_is_declared(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            db, _, _ = self._run_once(directory)
+            with DAGScheduler(db, max_workers=1) as scheduler:
+                scheduler._conn.execute("UPDATE attempts SET envelope=NULL")
+                scheduler._conn.commit()
+                report = build_provenance(scheduler, "prov").as_dict()
         self.assertFalse(report["claims_available"])
-        self.assertEqual(report["claim_count"], 0)
+        self.assertIn("no_persisted_envelopes", [item["code"] for item in report["findings"]])
 
     def test_json_safe_handles_unserializable_values(self) -> None:
         self.assertEqual(json_safe({"a": 1}), {"a": 1})
