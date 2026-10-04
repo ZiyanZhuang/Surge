@@ -113,7 +113,7 @@ python benchmark_gate_c.py `
 
 报告包含实测峰值并发、预算不变量、heartbeat 事件计数、逐次调用明细、独立 check 结论和 provenance。加 `--isolate` 可让每次模型调用进入独立子进程，获得硬超时。
 
-**执行状态**：真实 Gate C 尚未运行。它需要一个由操作者显式启动并授权的本地 Anthropic-compatible endpoint；在此之前的探测结果是 127.0.0.1:17800 未监听，因此没有可复核的真实案例数据。
+**执行状态**：Gate C 已于 2026-10-04T03:04:17Z 执行并通过，三案例、`max_workers=2`、实测峰值并发 2、6/6 节点成功、预算不变量成立、真实结算 0.00935。逐案例结果与原始记录见 [smoke-results/README.zh-CN.md](smoke-results/README.zh-CN.md) 与 [gate-c.json](smoke-results/gate-c.json)。它仍然只说明这三个案例在这条 endpoint 上完成，`max_workers=2` 也不构成 64 路真实容量结论。
 
 ## 暂不纳入首轮
 

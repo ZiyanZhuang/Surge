@@ -46,9 +46,24 @@ python benchmark_real_smoke.py `
 
 当前回归套件：**134 项全部通过**，其中 20 项是库内 `HttpWorkerAdapter` 单测、8 项进程隔离、20 项验证与 provenance、9 项 Gate C harness、14 项 `dsh-surge-run` CLI 与计划加载、7 项发布卫生测试。
 
-## Gate C 状态
+## Gate C 结果
 
-Gate C 的 harness（`benchmark_gate_c.py`）已经就绪并有离线回环测试覆盖：三案例、`max_workers=2`、预算 preflight、峰值并发与预算不变量统计、heartbeat 事件计数、逐次调用明细、独立 check 节点与 provenance。**真实 Gate C 尚未执行**：它需要一个由操作者显式启动并授权的本地 Anthropic-compatible endpoint；本机 127.0.0.1:17800 当前没有在监听，因此在反代启动前不会产生任何真实案例结果。
+**Gate C 已执行并通过。** 2026-10-04T03:04:17Z，三案例、`max_workers=2`、经授权的本地 Anthropic-compatible 反代（`gpt-6.1-sol`），原始记录见 [gate-c.json](gate-c.json)。
+
+| 指标 | 实测值 |
+|---|---|
+| 案例通过 | 3/3（答案 127.4、93.5%、24.69%，均与冻结 oracle 一致） |
+| 节点 | 6/6 succeeded，无 failed / blocked |
+| 配置并发 / 实测峰值 | 2 / 2（第三个 wave-0 节点等待了槽位） |
+| 真实模型调用 | 3 次，HTTP 200，SSE 事件序列完整 |
+| usage | 233/32、257/138、213/62（均低于请求上限 2000） |
+| 预算 | 预留 0.27 → 全部释放，实际结算 0.00935，`spent + reserved <= budget` 成立 |
+| heartbeat 事件 | 3 |
+| wall clock | 6.893 s |
+
+另外单独跑了一次进程隔离变体（单案例、`--isolate`、`max_workers=1`），结果见 [gate-c-isolated.json](gate-c-isolated.json)：同样通过，峰值并发 1，wall clock 8.248 s。同一案例在进程内耗时 3.677 s，差额来自子进程启动与模块导入，这是隔离层的实际代价。
+
+验证器对三个 `solve` 节点都给出了 `self_reference`：模型自己的 claim 只引用了自己产出的响应，缺少独立来源。这是设计中的信号，`check` 节点提供的才是外部证据。provenance 的 3 条 `uncited_artifact` 属于信息性发现（`check` 节点自己的 artifact 未被任何 claim 引用）。
 
 ## 边界与风险
 

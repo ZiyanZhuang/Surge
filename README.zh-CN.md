@@ -37,7 +37,7 @@
 
 ## 发布状态
 
-当前为 `v0.1.0` 级别的技术预览。已经具备：单机调度内核、离线回放、artifact/evidence 校验、库内一等公民的真实模型适配器 `surge_cluster.HttpWorkerAdapter`，以及把它串成一条命令的 `dsh-surge-run`。尚未完成：Python 到 DSH Host `llm.stream` business Service 的直接 bridge、真实多案例并发验证、进程级硬隔离和独立科研 verifier。真实调用是显式选择的网络行为，不属于默认回归测试。
+当前为 `v0.1.0` 级别的技术预览。已经具备：单机调度内核、离线回放、artifact/evidence 校验、库内一等公民的真实模型适配器 `surge_cluster.HttpWorkerAdapter`、把它串成一条命令的 `dsh-surge-run`、进程级硬隔离 `IsolatedAdapter`、独立验证器与 provenance，以及三案例 `max_workers=2` 的真实并发运行（Gate C）。尚未完成：Python 到 DSH Host `llm.stream` business Service 的直接 bridge、64 路以上的真实容量验证、模型侧 verifier 和 envelope 落库。真实调用是显式选择的网络行为，不属于默认回归测试。
 
 ## 当前能力
 

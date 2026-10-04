@@ -1,0 +1,560 @@
+{
+  "adapter": {
+    "budget_model": "node max_tokens 是单次调用预算预留上限（输入+输出）",
+    "cost_per_1k_tokens": 0.01,
+    "endpoint": "http://127.0.0.1:17800/v1/messages",
+    "isolated": false,
+    "model": "gpt-6.1-sol",
+    "node_max_tokens": 8000,
+    "request_max_tokens_ceiling": 2000,
+    "transport": "Anthropic Messages SSE; authorized local reverse proxy"
+  },
+  "adapter_calls": [
+    {
+      "elapsed_seconds": 3.676155,
+      "events": 6,
+      "http_status": 200,
+      "kind": "ok",
+      "node_id": "case1/solve",
+      "ok": true,
+      "output_sha256": "94a44701c04e16dc9b9f4ad222c4f59af4f3a7b1b17a687fda1c37c7dbfe55f7",
+      "request_max_tokens": 2000,
+      "usage": {
+        "input_tokens": 233,
+        "output_tokens": 32
+      }
+    },
+    {
+      "elapsed_seconds": 6.332679,
+      "events": 6,
+      "http_status": 200,
+      "kind": "ok",
+      "node_id": "case2/solve",
+      "ok": true,
+      "output_sha256": "637c42c219eb5eef2f2365dbe118ef13a7a2851da62eab0d74e37bb3c56ab93f",
+      "request_max_tokens": 2000,
+      "usage": {
+        "input_tokens": 257,
+        "output_tokens": 138
+      }
+    },
+    {
+      "elapsed_seconds": 3.095908,
+      "events": 13,
+      "http_status": 200,
+      "kind": "ok",
+      "node_id": "case3/solve",
+      "ok": true,
+      "output_sha256": "d5a86100d83d5f8d4f12ab2aed8ad9061a62ede92ec4ba7353ce3e8b8be6bb66",
+      "request_max_tokens": 2000,
+      "usage": {
+        "input_tokens": 213,
+        "output_tokens": 62
+      }
+    }
+  ],
+  "benchmark": "Gate C: three-case bounded-concurrency real adapter run",
+  "budget": {
+    "budget_cost": 5.0,
+    "committed_cost": 0.00935,
+    "invariant_ok": true,
+    "ledger": {
+      "charge": 0.00935,
+      "release": -0.27,
+      "reserve": 0.27
+    },
+    "ledger_entries": 15,
+    "reserved_cost": 0.0,
+    "spent_cost": 0.00935
+  },
+  "budget_invariant_ok": true,
+  "cases": [
+    {
+      "answer_check": {
+        "normalized_gold": "127.40",
+        "ok": true,
+        "percent_mode": "direct",
+        "tolerance": "0.005"
+      },
+      "case": "case1",
+      "exe_ans_ok": true,
+      "id": "V/2008/page_17.pdf-1",
+      "model_answer": "127.4",
+      "oracle_ok": true,
+      "oracle_value": "127.4",
+      "passed": true,
+      "program": "divide(637, const_5)",
+      "question": "what is the average payment volume per transaction for american express?",
+      "request_max_tokens": 2000,
+      "usage": {
+        "input_tokens": 233,
+        "output_tokens": 32
+      }
+    },
+    {
+      "answer_check": {
+        "normalized_gold": "93.5",
+        "ok": true,
+        "percent_mode": "direct",
+        "tolerance": "0.05"
+      },
+      "case": "case2",
+      "exe_ans_ok": true,
+      "id": "C/2017/page_328.pdf-1",
+      "model_answer": "93.5%",
+      "oracle_ok": true,
+      "oracle_value": "0.935",
+      "passed": true,
+      "program": "subtract(193.5, const_100), divide(#0, const_100)",
+      "question": "what was the percentage cumulative total return for the five year period ended 31-dec-2017 of citi common stock?",
+      "request_max_tokens": 2000,
+      "usage": {
+        "input_tokens": 257,
+        "output_tokens": 138
+      }
+    },
+    {
+      "answer_check": {
+        "normalized_gold": "24.69",
+        "ok": true,
+        "percent_mode": "direct",
+        "tolerance": "0.005"
+      },
+      "case": "case3",
+      "exe_ans_ok": true,
+      "id": "DVN/2007/page_58.pdf-2",
+      "model_answer": "24.69%",
+      "oracle_ok": true,
+      "oracle_value": "24.69135802469135802469135802469135802469",
+      "passed": true,
+      "program": "divide(60, 243), multiply(#0, const_100)",
+      "question": "what percentage of the total oil and gas mmboe comes from canada?",
+      "request_max_tokens": 2000,
+      "usage": {
+        "input_tokens": 213,
+        "output_tokens": 62
+      }
+    }
+  ],
+  "cases_passed": 3,
+  "concurrency": {
+    "configured_max_workers": 2,
+    "model_calls": 3,
+    "node_count": 6,
+    "observed_peak_adapter_calls": 2
+  },
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.13.3"
+  },
+  "event_counts": {
+    "run.completed": 1,
+    "run.created": 1,
+    "task.completed": 6,
+    "task.heartbeat": 3,
+    "task.routed": 6,
+    "task.started": 6,
+    "validation.completed": 6
+  },
+  "fixture": {
+    "cases_requested": 3,
+    "manifest": {
+      "attribution": "Chen et al., FinQA: A Dataset of Numerical Reasoning over Financial Data, EMNLP 2021",
+      "fixture_sha256": "be4edcba1445dc75cb07bc06550837107db4b1a3785774b40736a75e45848253",
+      "license_status": "upstream-license-not-identified",
+      "record_ids": [
+        "V/2008/page_17.pdf-1",
+        "C/2017/page_328.pdf-1",
+        "DVN/2007/page_58.pdf-2"
+      ],
+      "redistribution_note": "Test fixture only; confirm upstream dataset and source-document terms before redistribution.",
+      "revision": "0f16e2867befa6840783e58be38c9efb9229d742",
+      "source_filename": "dev.json",
+      "source_sha256": "a847fb7e0d61a3125a1e2909852df6b89f1ee64d2c5ff1bf689e332214deee51",
+      "source_url": "https://github.com/czyssrs/FinQA",
+      "split": "dev"
+    },
+    "path": "tests\\fixtures\\finqa\\smoke.jsonl",
+    "sha256": "be4edcba1445dc75cb07bc06550837107db4b1a3785774b40736a75e45848253"
+  },
+  "generated_at_utc": "2026-10-04T03:04:17Z",
+  "heartbeat_events": 3,
+  "limitations": [
+    "Three cases on one endpoint: no provider capacity, quota or stability claim.",
+    "The reverse proxy must be started and authorized by the operator; this script never starts it.",
+    "FinQA is a financial question-answering fixture; scientific-domain quality is unverified.",
+    "Python thread isolation is cooperative; use --isolate for hard per-call timeouts."
+  ],
+  "nodes": [
+    {
+      "attempt_count": 1,
+      "error": null,
+      "id": "case1/solve",
+      "incremental_value": 1.0,
+      "progress": 1.0,
+      "route_class": "default",
+      "stage": "scout",
+      "status": "succeeded",
+      "urgency": 0.0
+    },
+    {
+      "attempt_count": 1,
+      "error": null,
+      "id": "case2/solve",
+      "incremental_value": 1.0,
+      "progress": 1.0,
+      "route_class": "default",
+      "stage": "scout",
+      "status": "succeeded",
+      "urgency": 0.0
+    },
+    {
+      "attempt_count": 1,
+      "error": null,
+      "id": "case3/solve",
+      "incremental_value": 1.0,
+      "progress": 1.0,
+      "route_class": "default",
+      "stage": "scout",
+      "status": "succeeded",
+      "urgency": 0.0
+    },
+    {
+      "attempt_count": 1,
+      "error": null,
+      "id": "case1/check",
+      "incremental_value": 1.0,
+      "progress": 1.0,
+      "route_class": "default",
+      "stage": "verify",
+      "status": "succeeded",
+      "urgency": 0.0
+    },
+    {
+      "attempt_count": 1,
+      "error": null,
+      "id": "case2/check",
+      "incremental_value": 1.0,
+      "progress": 1.0,
+      "route_class": "default",
+      "stage": "verify",
+      "status": "succeeded",
+      "urgency": 0.0
+    },
+    {
+      "attempt_count": 1,
+      "error": null,
+      "id": "case3/check",
+      "incremental_value": 1.0,
+      "progress": 1.0,
+      "route_class": "default",
+      "stage": "verify",
+      "status": "succeeded",
+      "urgency": 0.0
+    }
+  ],
+  "passed": true,
+  "provenance": {
+    "artifact_count": 6,
+    "artifacts": [
+      {
+        "name": "check",
+        "node_id": "case1/check",
+        "readable": true,
+        "ref": "artifact:4e95bfed613164d14fb2fec2b6dc8e6c4070dbaad6099b32ab254c40b0a8779a",
+        "sha256": "4e95bfed613164d14fb2fec2b6dc8e6c4070dbaad6099b32ab254c40b0a8779a"
+      },
+      {
+        "name": "model-response",
+        "node_id": "case1/solve",
+        "readable": true,
+        "ref": "artifact:85cb048cc9cbe896f198972a4fc6d68588b86126b53dc08faa19c9d4f2028988",
+        "sha256": "85cb048cc9cbe896f198972a4fc6d68588b86126b53dc08faa19c9d4f2028988"
+      },
+      {
+        "name": "check",
+        "node_id": "case2/check",
+        "readable": true,
+        "ref": "artifact:de9575caea72a3b352f81b8f8a66b43e56e395d05a0b88a573fde7bb5fcc528f",
+        "sha256": "de9575caea72a3b352f81b8f8a66b43e56e395d05a0b88a573fde7bb5fcc528f"
+      },
+      {
+        "name": "model-response",
+        "node_id": "case2/solve",
+        "readable": true,
+        "ref": "artifact:c299bb5d3c7827aeb9c873e519d97a3297ab9d356d3e45ba571d0c54b26ccd35",
+        "sha256": "c299bb5d3c7827aeb9c873e519d97a3297ab9d356d3e45ba571d0c54b26ccd35"
+      },
+      {
+        "name": "check",
+        "node_id": "case3/check",
+        "readable": true,
+        "ref": "artifact:87ab2e71df1583dc3ba5f92370cd628504204b5e3b06fb4f40ed08ac94b9a0b6",
+        "sha256": "87ab2e71df1583dc3ba5f92370cd628504204b5e3b06fb4f40ed08ac94b9a0b6"
+      },
+      {
+        "name": "model-response",
+        "node_id": "case3/solve",
+        "readable": true,
+        "ref": "artifact:33d5283951f37ee7f329b5bf042bb386993ce0344ef3606ab77225773e66d285",
+        "sha256": "33d5283951f37ee7f329b5bf042bb386993ce0344ef3606ab77225773e66d285"
+      }
+    ],
+    "claim_count": 3,
+    "claims": [
+      {
+        "id": "case1-verified",
+        "node_id": "case1/check",
+        "text": "matches the frozen FinQA oracle"
+      },
+      {
+        "id": "case2-verified",
+        "node_id": "case2/check",
+        "text": "matches the frozen FinQA oracle"
+      },
+      {
+        "id": "case3-verified",
+        "node_id": "case3/check",
+        "text": "matches the frozen FinQA oracle"
+      }
+    ],
+    "claims_available": true,
+    "edge_count": 9,
+    "edges": [
+      {
+        "from": "node:case1/check",
+        "kind": "produced",
+        "to": "artifact:artifact:4e95bfed613164d14fb2fec2b6dc8e6c4070dbaad6099b32ab254c40b0a8779a"
+      },
+      {
+        "from": "node:case1/solve",
+        "kind": "produced",
+        "to": "artifact:artifact:85cb048cc9cbe896f198972a4fc6d68588b86126b53dc08faa19c9d4f2028988"
+      },
+      {
+        "from": "node:case2/check",
+        "kind": "produced",
+        "to": "artifact:artifact:de9575caea72a3b352f81b8f8a66b43e56e395d05a0b88a573fde7bb5fcc528f"
+      },
+      {
+        "from": "node:case2/solve",
+        "kind": "produced",
+        "to": "artifact:artifact:c299bb5d3c7827aeb9c873e519d97a3297ab9d356d3e45ba571d0c54b26ccd35"
+      },
+      {
+        "from": "node:case3/check",
+        "kind": "produced",
+        "to": "artifact:artifact:87ab2e71df1583dc3ba5f92370cd628504204b5e3b06fb4f40ed08ac94b9a0b6"
+      },
+      {
+        "from": "node:case3/solve",
+        "kind": "produced",
+        "to": "artifact:artifact:33d5283951f37ee7f329b5bf042bb386993ce0344ef3606ab77225773e66d285"
+      },
+      {
+        "from": "claim:case1/check/case1-verified",
+        "kind": "cites",
+        "to": "evidence:artifact:85cb048cc9cbe896f198972a4fc6d68588b86126b53dc08faa19c9d4f2028988"
+      },
+      {
+        "from": "claim:case2/check/case2-verified",
+        "kind": "cites",
+        "to": "evidence:artifact:c299bb5d3c7827aeb9c873e519d97a3297ab9d356d3e45ba571d0c54b26ccd35"
+      },
+      {
+        "from": "claim:case3/check/case3-verified",
+        "kind": "cites",
+        "to": "evidence:artifact:33d5283951f37ee7f329b5bf042bb386993ce0344ef3606ab77225773e66d285"
+      }
+    ],
+    "finding_count": 3,
+    "findings": [
+      {
+        "code": "uncited_artifact",
+        "name": "check",
+        "node_id": "case1/check"
+      },
+      {
+        "code": "uncited_artifact",
+        "name": "check",
+        "node_id": "case2/check"
+      },
+      {
+        "code": "uncited_artifact",
+        "name": "check",
+        "node_id": "case3/check"
+      }
+    ],
+    "node_count": 6,
+    "nodes": [
+      {
+        "attempts": 1,
+        "id": "case1/solve",
+        "status": "succeeded"
+      },
+      {
+        "attempts": 1,
+        "id": "case2/solve",
+        "status": "succeeded"
+      },
+      {
+        "attempts": 1,
+        "id": "case3/solve",
+        "status": "succeeded"
+      },
+      {
+        "attempts": 1,
+        "id": "case1/check",
+        "status": "succeeded"
+      },
+      {
+        "attempts": 1,
+        "id": "case2/check",
+        "status": "succeeded"
+      },
+      {
+        "attempts": 1,
+        "id": "case3/check",
+        "status": "succeeded"
+      }
+    ]
+  },
+  "result": {
+    "blocked": [],
+    "failed": [],
+    "spent_cost": 0.00935,
+    "status": "succeeded",
+    "succeeded": [
+      "case1/check",
+      "case1/solve",
+      "case2/check",
+      "case2/solve",
+      "case3/check",
+      "case3/solve"
+    ],
+    "wall_seconds": 6.893
+  },
+  "schema_version": 1,
+  "verification": {
+    "nodes_passed": 3,
+    "nodes_verified": 6,
+    "policy": "annotate",
+    "records": [
+      {
+        "node_id": "case1/solve",
+        "verification": {
+          "checked_claims": 1,
+          "issue_count": 1,
+          "issues": [
+            {
+              "claim_id": "model-answer",
+              "code": "self_reference",
+              "detail": "claim evidence comes only from the node that produced the claim",
+              "severity": "error"
+            }
+          ],
+          "note": "",
+          "passed": false,
+          "resolved_evidence": [
+            "artifact:85cb048cc9cbe896f198972a4fc6d68588b86126b53dc08faa19c9d4f2028988",
+            "model-response"
+          ],
+          "score": 0.5,
+          "verifier": "evidence-verifier"
+        }
+      },
+      {
+        "node_id": "case2/solve",
+        "verification": {
+          "checked_claims": 1,
+          "issue_count": 1,
+          "issues": [
+            {
+              "claim_id": "model-answer",
+              "code": "self_reference",
+              "detail": "claim evidence comes only from the node that produced the claim",
+              "severity": "error"
+            }
+          ],
+          "note": "",
+          "passed": false,
+          "resolved_evidence": [
+            "artifact:c299bb5d3c7827aeb9c873e519d97a3297ab9d356d3e45ba571d0c54b26ccd35",
+            "model-response"
+          ],
+          "score": 0.5,
+          "verifier": "evidence-verifier"
+        }
+      },
+      {
+        "node_id": "case3/solve",
+        "verification": {
+          "checked_claims": 1,
+          "issue_count": 1,
+          "issues": [
+            {
+              "claim_id": "model-answer",
+              "code": "self_reference",
+              "detail": "claim evidence comes only from the node that produced the claim",
+              "severity": "error"
+            }
+          ],
+          "note": "",
+          "passed": false,
+          "resolved_evidence": [
+            "artifact:33d5283951f37ee7f329b5bf042bb386993ce0344ef3606ab77225773e66d285",
+            "model-response"
+          ],
+          "score": 0.5,
+          "verifier": "evidence-verifier"
+        }
+      },
+      {
+        "node_id": "case1/check",
+        "verification": {
+          "checked_claims": 1,
+          "issue_count": 0,
+          "issues": [],
+          "note": "",
+          "passed": true,
+          "resolved_evidence": [
+            "artifact:85cb048cc9cbe896f198972a4fc6d68588b86126b53dc08faa19c9d4f2028988"
+          ],
+          "score": 1.0,
+          "verifier": "evidence-verifier"
+        }
+      },
+      {
+        "node_id": "case2/check",
+        "verification": {
+          "checked_claims": 1,
+          "issue_count": 0,
+          "issues": [],
+          "note": "",
+          "passed": true,
+          "resolved_evidence": [
+            "artifact:c299bb5d3c7827aeb9c873e519d97a3297ab9d356d3e45ba571d0c54b26ccd35"
+          ],
+          "score": 1.0,
+          "verifier": "evidence-verifier"
+        }
+      },
+      {
+        "node_id": "case3/check",
+        "verification": {
+          "checked_claims": 1,
+          "issue_count": 0,
+          "issues": [],
+          "note": "",
+          "passed": true,
+          "resolved_evidence": [
+            "artifact:33d5283951f37ee7f329b5bf042bb386993ce0344ef3606ab77225773e66d285"
+          ],
+          "score": 1.0,
+          "verifier": "evidence-verifier"
+        }
+      }
+    ],
+    "verifier": "evidence-verifier"
+  }
+}

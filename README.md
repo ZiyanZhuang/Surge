@@ -87,7 +87,7 @@ Optional switches: `--isolate` runs every model call in its own worker process (
 
 `benchmark_gate_c.py` submits three FinQA cases as one run with `max_workers=2`, so the third wave-0 node has to wait for a slot. Each case has a real `solve` node and a deterministic `check` node that re-reads the persisted model response and compares it against the frozen oracle. The report includes observed peak concurrency, the budget invariant, heartbeat event counts, per-call metadata, the verification summary, and provenance.
 
-It refuses to run when the estimated input tokens plus the output ceiling would not fit the declared `node.max_tokens`, so a run cannot silently die mid-way on the hard budget. Gate C has not been executed against a live endpoint yet: it needs an operator-started, authorized Anthropic-compatible endpoint.
+It refuses to run when the estimated input tokens plus the output ceiling would not fit the declared `node.max_tokens`, so a run cannot silently die mid-way on the hard budget. Gate C has been executed: 2026-10-04T03:04:17Z, three cases, `max_workers=2`, observed peak concurrency 2, 6/6 nodes succeeded, budget invariant intact, settled cost 0.00935. See [gate-c.json](smoke-results/gate-c.json) for the raw record. This says nothing about 64-way provider capacity.
 
 ## Preset versus executor
 
