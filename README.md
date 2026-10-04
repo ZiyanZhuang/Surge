@@ -107,7 +107,47 @@ python -m build --sdist --wheel --outdir dist
 python scripts/verify_release.py --dist dist
 ```
 
-See [docs/QUICKSTART.zh-CN.md](docs/QUICKSTART.zh-CN.md) for the minimal DAG and the optional real-adapter command. See [docs/ADAPTER-CONTRACT.zh-CN.md](docs/ADAPTER-CONTRACT.zh-CN.md) for the `WorkerAdapter` boundary and fail-closed output policy. See [CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) for clean submission and fixture-attribution rules.
+See [docs/QUICKSTART.zh-CN.md](docs/QUICKSTART.zh-CN.md) for the minimal DAG and the optional real-adapter command. See [docs/ADAPTER-CONTRACT.zh-CN.md](docs/ADAPTER-CONTRACT.zh-CN.md) for the `WorkerAdapter` boundary, the decorator composition order and the audit surface. See [CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) for clean submission and fixture-attribution rules.
+
+## Capabilities
+
+- Persistent Run, Node, Attempt, Artifact, budget ledger and event state in SQLite
+- Dependency validation, cycle detection, a priority ready queue, and bounded per-run `max_workers` concurrency
+- Per-stage `max_in_flight`/`dispatch_batch` incremental dispatch instead of unconditional fan-out
+- Demand computed from `incremental_value`, `urgency` and live completion progress; workers report monotonic progress through `context["report_progress"]`
+- Four discrete waves: Scout → Deepen → Verify → Synthesize, with a gate that keeps the next wave from starting below the success threshold
+- `RouteProfile` selection by task class, stage quality floor, concurrency capacity, budget and progress
+- Low-marginal nodes recorded as `deferred` once the incremental target is met
+- Bounded retries, exponential backoff, cooperative timeouts, and downstream `blocked` propagation
+- Lease heartbeat and stale-lease recovery, with explicit **at-least-once** semantics
+- `strict`/`lenient` envelope policies, strict JSON validation, and evidence-reference checking
+- Content-addressed artifacts with atomic commits and SHA-256 digests
+- Budget reservation before the call and settlement after it, with a hard ceiling
+- `RunResult.blocked` aggregates `blocked` and `cancelled`; read `snapshot()` to tell them apart
+
+Node timeouts emit a cooperative stop signal and hold the old slot until the thread ends, so a retry cannot overlap the previous call or exceed the logical concurrency limit. For hard timeouts and strict physical concurrency, use `IsolatedAdapter` or `dsh-surge-run --isolate`, which run each call in its own process.
+
+## Minimal usage
+
+```python
+from surge_cluster import DAGScheduler, NodeSpec, RunSpec, LocalEchoAdapter
+
+run = RunSpec(id="demo", budget_cost=10.0, max_nodes=20)
+nodes = [
+    NodeSpec(id="scout", wave=0, prompt="collect evidence", max_attempts=2),
+    NodeSpec(id="synth", wave=3, prompt="summarize verified evidence only", depends_on=["scout"]),
+]
+with DAGScheduler("demo.sqlite3", max_workers=4) as scheduler:
+    scheduler.submit(run, nodes)
+    result = scheduler.execute(LocalEchoAdapter())
+    print(result.status)
+```
+
+## DSH preset registration and integration boundary
+
+[preset-langchao.patch.yml](preset-langchao.patch.yml) is an overlay example for a user profile; it does not modify the current DSH profile automatically. Merge its patch into the profile's `cordis.patch.yml` (back the file up first), refresh the DSH page, restart the Host if needed, and pick **浪潮模式** in the mode selector. It keeps standard/ptc/minimal/cordis and adds `preset-langchao`. To ship it in a distribution, move the preset into `dsh-web-app/presets/` and update the package files and bundle patch.
+
+`WorkerAdapter` is the stable seam. The scheduler never guesses at or calls a DSH Service directly. `surge_cluster.HttpWorkerAdapter` is a first-class library adapter aimed at an authorized local reverse proxy or a compatible Messages endpoint; a direct Python-to-DSH `llm.stream` business-Service bridge still has to be implemented and reviewed in a Host plugin. Profile patches only register model-visible modes and tool sets; multi-process and multi-host execution need a separate runtime design.
 
 ## Scope and non-goals
 
