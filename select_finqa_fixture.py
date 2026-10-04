@@ -220,7 +220,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         parser.error(str(exc))
-    print(json.dumps({"selected": len(selected), "output": str(args.output), "manifest": provenance}, ensure_ascii=False, indent=2))
+    # stdout 使用 ASCII 转义，避免在 cp936/GBK 控制台或管道中把中文路径写成乱码字节。
+    print(json.dumps({"selected": len(selected), "output": str(args.output), "manifest": provenance}, ensure_ascii=True, indent=2))
     return 0
 
 

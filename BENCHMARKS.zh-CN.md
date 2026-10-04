@@ -14,39 +14,32 @@
 
 ## 2. 本地 64-Agent 基准
 
-新增 [benchmark_64.py](benchmark_64.py)，运行两个场景：
+脚本：[benchmark_64.py](benchmark_64.py)，运行两个场景：
 
 1. `fanout64`：64 个独立 Agent 同时处于 wave 0，验证 64-way scheduler fan-out。
 2. `waves64`：32 Scout → 16 Deepen → 8 Verify → 8 Synthesize，共 64 个 Agent，验证浪潮模式的离散 wave gate。
 
-指标参考并发压测常用维度：
-
-- 成功/失败/blocked 数
-- 实际最大并发数
-- wall-clock latency
-- agents/s throughput
-- worker latency median/p95
-- usage cost
+指标参考并发压测常用维度：成功/失败/blocked 数、实际最大并发数、wall-clock latency、agents/s、worker latency median/p95、usage cost。
 
 运行：
 
 ```powershell
 Set-Location .\浪潮模式
-python benchmark_64.py --workers 64 --delay 0.02
+python benchmark_64.py --workers 64 --delay 0.02 --repeat 5
 ```
 
-结果保存到 [benchmark-64.json](benchmark-results/benchmark-64.json)。`delay=0.02` 是确定性的本地 synthetic I/O 延迟；没有网络、模型或 GPU 调用。CLI 会校验参数，并在场景未全部成功时以非零退出；结果带有环境信息，但仍是单次运行，不能作为统计结论。
+`--repeat N` 对每个场景采样 N 次并给出 min/median/max，默认 1 次。结果保存到 [benchmark-64.json](benchmark-results/benchmark-64.json)。`delay=0.02` 是确定性的本地 synthetic I/O 延迟，没有网络、模型或 GPU 调用；这条负载的吞吐主要由固定 sleep 与线程调度开销决定，属于机器相关的观测值，不能当作调度器能力指标。CLI 会校验参数，并在任一场景未全部成功时以非零退出。
 
-## 3. 本次结果
+## 3. 回归结果（5 次采样）
 
-以下结果由当前代码在 Windows 11、Python 3.13.3、`--workers 64 --delay 0.02` 单次运行生成，原始 JSON 见 [benchmark-64.json](benchmark-results/benchmark-64.json)。它只用于本次发布前回归，不代表稳定吞吐。
+以下结果由当前代码在 Windows 11、Python 3.13.3、`--workers 64 --delay 0.02 --repeat 5` 生成，原始 JSON 见 [benchmark-64.json](benchmark-results/benchmark-64.json)。
 
-| 场景 | Agent 数 | 配置并发 | 实际峰值 | wall s | throughput | 状态 |
-|---|---:|---:|---:|---:|---:|---|
-| fanout64 | 64 | 64 | 64 | 0.722331 | 88.602/s | succeeded |
-| waves64 | 64 | 64 | 32 | 0.811839 | 78.833/s | succeeded |
+| 场景 | Agent 数 | 配置并发 | 实际峰值 | throughput 中位数（min–max） | wall s 中位数 | 成功 |
+|---|---:|---:|---:|---|---:|---|
+| fanout64 | 64 | 64 | 64 | 84.099/s（81.699–85.004） | 0.761 | 5/5 |
+| waves64 | 64 | 64 | 32 | 74.332/s（59.495–77.096） | 0.861 | 5/5 |
 
-两场景均为 64/64 成功，失败和 blocked 均为 0。`waves64` 峰值为 32 是预期结果：wave gate 让各波次串行推进，单个 wave 最大只有 32 个节点。需求感知版本的旧输出若存在，不要与本次基础结果混称。
+同一台机器、同一 Python 版本的 5 次采样中，`waves64` 的吞吐区间约为 59.5–77.1/s，离散度接近 30%。此前发布记录里的单次 `88.602/s` 高于本轮 5 次采样的最大值，本轮未能复现，不应作为吞吐指标引用。可以稳定复现的是结构性的部分：两个场景各 64/64 成功，`fanout64` 峰值并发达到 64，`waves64` 峰值 32（wave gate 让各波次串行推进，单个 wave 最多 32 个节点）。
 
 ## 4. 真实 GPT 路由 64-Agent 压力结果（历史快照）
 

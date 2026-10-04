@@ -1,6 +1,7 @@
 {
   "benchmark": "浪潮模式 64-agent local concurrency benchmark",
-  "methodology": "Single-run synthetic local scheduler measurement; not a statistical sample and not an LLM quality or remote inference benchmark.",
+  "methodology": "Synthetic local scheduler measurement only; not an LLM quality or remote inference benchmark. Throughput here tracks a fixed local sleep plus scheduling overhead, so it is a machine-dependent observation, not a capability metric.",
+  "repeat": 5,
   "environment": {
     "python": "3.13.3",
     "platform": "Windows-11-10.0.26200-SP0"
@@ -16,14 +17,15 @@
       "failed": 0,
       "blocked": 0,
       "max_active_observed": 64,
-      "wall_seconds": 0.722331,
-      "throughput_agents_per_second": 88.602,
+      "wall_seconds": 0.878004,
+      "throughput_agents_per_second": 72.893,
       "latency_seconds": {
-        "median": 0.101225,
-        "p95": 0.157828
+        "median": 0.117746,
+        "p95": 0.18007
       },
       "spent_cost": 0.010240000000000016,
-      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark."
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 0
     },
     {
       "scenario": "waves64",
@@ -35,14 +37,209 @@
       "failed": 0,
       "blocked": 0,
       "max_active_observed": 32,
-      "wall_seconds": 0.811839,
-      "throughput_agents_per_second": 78.833,
+      "wall_seconds": 0.877087,
+      "throughput_agents_per_second": 72.969,
       "latency_seconds": {
-        "median": 0.045875,
-        "p95": 0.089095
+        "median": 0.04735,
+        "p95": 0.092072
       },
       "spent_cost": 0.010240000000000016,
-      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark."
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 0
+    },
+    {
+      "scenario": "fanout64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 64,
+      "wall_seconds": 0.805743,
+      "throughput_agents_per_second": 79.43,
+      "latency_seconds": {
+        "median": 0.115807,
+        "p95": 0.170887
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 1
+    },
+    {
+      "scenario": "waves64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 32,
+      "wall_seconds": 0.893989,
+      "throughput_agents_per_second": 71.589,
+      "latency_seconds": {
+        "median": 0.047049,
+        "p95": 0.083761
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 1
+    },
+    {
+      "scenario": "fanout64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 64,
+      "wall_seconds": 0.869801,
+      "throughput_agents_per_second": 73.58,
+      "latency_seconds": {
+        "median": 0.114286,
+        "p95": 0.178783
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 2
+    },
+    {
+      "scenario": "waves64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 32,
+      "wall_seconds": 0.940892,
+      "throughput_agents_per_second": 68.021,
+      "latency_seconds": {
+        "median": 0.048151,
+        "p95": 0.092891
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 2
+    },
+    {
+      "scenario": "fanout64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 64,
+      "wall_seconds": 0.873121,
+      "throughput_agents_per_second": 73.3,
+      "latency_seconds": {
+        "median": 0.107973,
+        "p95": 0.170035
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 3
+    },
+    {
+      "scenario": "waves64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 32,
+      "wall_seconds": 0.965587,
+      "throughput_agents_per_second": 66.281,
+      "latency_seconds": {
+        "median": 0.052814,
+        "p95": 0.104613
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 3
+    },
+    {
+      "scenario": "fanout64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 64,
+      "wall_seconds": 0.870526,
+      "throughput_agents_per_second": 73.519,
+      "latency_seconds": {
+        "median": 0.127664,
+        "p95": 0.190864
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 4
+    },
+    {
+      "scenario": "waves64",
+      "agents": 64,
+      "configured_workers": 64,
+      "synthetic_delay_seconds": 0.02,
+      "status": "succeeded",
+      "succeeded": 64,
+      "failed": 0,
+      "blocked": 0,
+      "max_active_observed": 32,
+      "wall_seconds": 0.910714,
+      "throughput_agents_per_second": 70.275,
+      "latency_seconds": {
+        "median": 0.04731,
+        "p95": 0.103362
+      },
+      "spent_cost": 0.010240000000000016,
+      "note": "Synthetic local scheduler benchmark; not an LLM quality or remote inference benchmark.",
+      "sample_index": 4
+    }
+  ],
+  "aggregates": [
+    {
+      "scenario": "fanout64",
+      "samples": 5,
+      "throughput_agents_per_second": {
+        "min": 72.893,
+        "median": 73.519,
+        "max": 79.43
+      },
+      "wall_seconds": {
+        "min": 0.805743,
+        "median": 0.870526,
+        "max": 0.878004
+      },
+      "max_active_observed": 64,
+      "all_succeeded": true
+    },
+    {
+      "scenario": "waves64",
+      "samples": 5,
+      "throughput_agents_per_second": {
+        "min": 66.281,
+        "median": 70.275,
+        "max": 72.969
+      },
+      "wall_seconds": {
+        "min": 0.877087,
+        "median": 0.910714,
+        "max": 0.965587
+      },
+      "max_active_observed": 32,
+      "all_succeeded": true
     }
   ]
 }

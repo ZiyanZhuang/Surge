@@ -324,7 +324,8 @@ def main() -> int:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(output, ensure_ascii=False, indent=2))
+    # stdout 使用 ASCII 转义，避免在 cp936/GBK 控制台或管道中出现乱码字节。
+    print(json.dumps(output, ensure_ascii=True, indent=2))
     return 0 if all(report["passed"] for report in reports) else 1
 
 

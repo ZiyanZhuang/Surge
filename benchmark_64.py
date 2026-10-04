@@ -127,31 +127,73 @@ def run_scenario(scenario: str, workers: int, delay_seconds: float) -> dict[str,
         shutil.rmtree(temp_root, ignore_errors=True)
 
 
+def aggregate(scenario: str, runs: list[dict[str, Any]]) -> dict[str, Any]:
+    """把同一场景的多次采样汇总为区间，避免把单次运行当成指标。"""
+
+    def stats(values: list[float]) -> dict[str, float]:
+        return {
+            "min": round(min(values), 6),
+            "median": round(median(values), 6),
+            "max": round(max(values), 6),
+        }
+
+    return {
+        "scenario": scenario,
+        "samples": len(runs),
+        "throughput_agents_per_second": stats([item["throughput_agents_per_second"] for item in runs]),
+        "wall_seconds": stats([item["wall_seconds"] for item in runs]),
+        "max_active_observed": max(item["max_active_observed"] for item in runs),
+        "all_succeeded": all(
+            item["status"] == "succeeded" and item["succeeded"] == item["agents"] for item in runs
+        ),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--workers", type=int, default=64)
     parser.add_argument("--delay", type=float, default=0.02)
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="repeat each scenario N times and report min/median/max instead of one sample",
+    )
     parser.add_argument("--output", type=Path, default=Path("benchmark-results") / "benchmark-64.json")
     args = parser.parse_args()
     if args.workers < 1:
         parser.error("--workers must be positive")
+    if args.repeat < 1:
+        parser.error("--repeat must be positive")
     if args.delay < 0 or args.delay != args.delay or args.delay == float("inf"):
         parser.error("--delay must be finite and non-negative")
-    runs = [run_scenario("fanout64", args.workers, args.delay), run_scenario("waves64", args.workers, args.delay)]
+    scenarios = ("fanout64", "waves64")
+    runs: list[dict[str, Any]] = []
+    for index in range(args.repeat):
+        for scenario in scenarios:
+            sample = run_scenario(scenario, args.workers, args.delay)
+            sample["sample_index"] = index
+            runs.append(sample)
     results = {
         "benchmark": "浪潮模式 64-agent local concurrency benchmark",
-        "methodology": "Single-run synthetic local scheduler measurement; not a statistical sample and not an LLM quality or remote inference benchmark.",
+        "methodology": (
+            "Synthetic local scheduler measurement only; not an LLM quality or remote inference "
+            "benchmark. Throughput here tracks a fixed local sleep plus scheduling overhead, so it "
+            "is a machine-dependent observation, not a capability metric."
+        ),
+        "repeat": args.repeat,
         "environment": {"python": sys.version.split()[0], "platform": platform.platform()},
         "runs": runs,
+        "aggregates": [aggregate(scenario, [item for item in runs if item["scenario"] == scenario]) for scenario in scenarios],
     }
-    if any(item["status"] != "succeeded" or item["succeeded"] != item["agents"] for item in runs):
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(results, ensure_ascii=False, indent=2))
-        raise SystemExit(1)
+    failed = any(item["status"] != "succeeded" or item["succeeded"] != item["agents"] for item in runs)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    # newline="\n" 让生成结果与仓库的 .gitattributes（eol=lf）保持一致。
+    args.output.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    # stdout 使用 ASCII 转义，避免在 cp936/GBK 控制台或管道中出现乱码字节。
+    print(json.dumps(results, ensure_ascii=True, indent=2))
+    if failed:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

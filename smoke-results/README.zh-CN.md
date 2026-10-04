@@ -44,7 +44,7 @@ python benchmark_real_smoke.py `
   --workdir smoke-runs
 ```
 
-当前回归套件：**60 项全部通过**，其中新增 8 项真实 adapter 安全/调度 harness 测试和 4 项发布卫生测试。
+当前回归套件：**96 项全部通过**，其中 20 项是库内 `HttpWorkerAdapter` 单测、14 项是 `dsh-surge-run` CLI 与计划加载单测、6 项是发布卫生测试。
 
 ## 边界与风险
 
