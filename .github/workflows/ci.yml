@@ -30,6 +30,9 @@ jobs:
       - name: Run offline regression suite
         run: python -B -m unittest discover -s tests -v
 
+      - name: Verify the DSH llm.stream bridge contract
+        run: node dsh-bridge/selftest.mjs
+
       - name: Build source distribution and wheel
         run: python -m build --sdist --wheel --outdir dist
 
