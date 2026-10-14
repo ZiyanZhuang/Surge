@@ -85,7 +85,7 @@ $bytes = New-Object byte[] 32
 3. 重启 DSH Host，然后验证：
 
 ```powershell
-python run_dag.py --plan examples\plan.example.json --output report.json `
+.\.venv\Scripts\python run_dag.py --plan examples\plan.example.json --output report.json `
   --endpoint http://127.0.0.1:17801/v1/messages --model gpt-6.1-sol `
   --api-key (Get-Content "$env:USERPROFILE\.dsh\llm-bridge-token")
 ```
@@ -96,7 +96,7 @@ python run_dag.py --plan examples\plan.example.json --output report.json `
 
 ## 已验证与未验证
 
-已在本机验证（`node dsh-bridge/selftest.mjs`，34/34 通过，CI 也会跑）：
+已在本机验证（`node dsh-bridge/selftest.mjs`，CI 也会跑，当前数量由命令输出给出）：
 
 - 鉴权、路径与方法拒绝、请求体校验与纯文本限制
 - SSE 事件顺序、文本映射、`reasoning-delta` 映射为 thinking 块、`max-tokens` → `stop_reason`

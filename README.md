@@ -39,7 +39,7 @@ Read the longer essay in [PHILOSOPHY.md](PHILOSOPHY.md) or [中文哲学文](PHI
 
 ## Current status
 
-The scheduler core, SQLite state, bounded per-run concurrency, four-wave gates, route selection, retries, lease recovery, budget accounting, artifact/evidence validation, offline FinQA replay, the first-class `surge_cluster.HttpWorkerAdapter`, the `dsh-surge-run` CLI, process-level isolation (`IsolatedAdapter`), the independent `EvidenceVerifier`, and the read-only audit surface are implemented. Direct Python-to-DSH `llm.stream` integration, a live multi-case concurrency run, model-side verification, and an independent scientific verifier remain future work.
+The scheduler core, SQLite state, bounded per-run concurrency, four-wave gates, route selection, retries, lease recovery, budget accounting, artifact/evidence validation, offline FinQA replay, the first-class `surge_cluster.HttpWorkerAdapter`, the `dsh-surge-run` CLI, process-level isolation (`IsolatedAdapter`), the independent `EvidenceVerifier`, and the read-only audit surface are implemented. The `ModelVerifier` and Host bridge protocol are implemented; live Host activation remains unverified. Archived Gate C/D reports document endpoint-specific concurrency observations. An independent scientific verifier and multi-host scheduling remain future work.
 
 The project targets research workflows, but the only real dataset exercised so far is the FinQA financial question-answering fixture; scientific-domain tasks are unverified. The default test suite is offline; real calls are opt-in, require an explicitly authorized endpoint, and are not part of the default regression run.
 
@@ -61,19 +61,19 @@ The repository ships a runnable four-wave example at [examples/plan.example.json
 Validate the plan offline first, with no network call:
 
 ```powershell
-python run_dag.py --plan plan.json --output report.json --dry-run
+.\.venv\Scripts\python run_dag.py --plan plan.json --output report.json --dry-run
 ```
 
 Then, only after you have authorized a real call:
 
 ```powershell
-python run_dag.py --plan plan.json --output report.json `
+.\.venv\Scripts\python run_dag.py --plan plan.json --output report.json `
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
 Exit codes: `0` all nodes succeeded, `1` a node failed or a downstream node was blocked, `2` an invalid plan or argument. The report carries a UTC timestamp, an environment snapshot, the plan SHA-256, per-node status, a budget snapshot, event counts, per-call metadata, and a provenance section; prompt text is never included.
 
-Optional switches: `--isolate` runs every model call in its own worker process (hard timeout via terminate/kill, strict physical concurrency); `--verify annotate|fail|off` adds independent evidence verification, where `fail` makes a failed verification fail the node and block downstream; `--no-provenance` omits the provenance section.
+Optional switches: `--api-key` passes an endpoint/bridge key (non-placeholder values are redacted from report metadata); `--isolate` runs every model call in its own worker process (hard timeout via terminate/kill, strict physical concurrency); `--verify annotate|fail|off` adds independent evidence verification, where `fail` makes a failed verification fail the node and block downstream; `--no-provenance` omits the provenance section.
 
 `node.max_tokens` is the per-call budget envelope (input plus output); the actual request ceiling is `min(--max-output-tokens, node.max_tokens)`, and the adapter fails closed when provider-reported output exceeds that ceiling.
 
@@ -89,7 +89,7 @@ Envelopes are persisted per attempt (successful and validation-failed alike), so
 
 `dsh-bridge/dsh-llm-bridge.mjs` is a Host plugin that maps `ctx.llm.stream(GenerateOptions)` onto Anthropic Messages SSE, which lets the Python side reuse the same verified `HttpWorkerAdapter` instead of growing a second transport. It binds loopback only, requires a token file, caps concurrency with HTTP 429, never fabricates usage the upstream did not report, and emits an `error` event without `message_stop` when the upstream fails or aborts.
 
-`node dsh-bridge/selftest.mjs` covers the protocol with a stub context (34 checks, also run in CI); `dsh-bridge/golden-sse.txt` is replayed by `tests/test_bridge_contract.py` so both sides stay pinned to one wire format. Activating the plugin requires a profile patch and a Host restart, which is left to the operator.
+`node dsh-bridge/selftest.mjs` covers the protocol with a stub context (also run in CI); `dsh-bridge/golden-sse.txt` is replayed by `tests/test_bridge_contract.py` so both sides stay pinned to one wire format. Activating the plugin requires a profile patch and a Host restart, which is left to the operator.
 
 ## Bounded concurrency against a real endpoint (Gate C)
 
@@ -107,7 +107,7 @@ It refuses to run when the estimated input tokens plus the output ceiling would 
 | 32 | 27/32 | 84.38% | 32 | `http` × 5 | 23.2 s |
 | 64 | 0/64 | 0% | 64 | `http` × 64 | 5.3 s |
 
-Every failure at 64 was an upstream `429` wrapped as `502`, and the whole burst was refused in 5.3 seconds at zero cost, so this endpoint's burst ceiling sits between 32 and 64. That also explains the older staggered result (16 batches of 4 returning 61/64): pacing keeps the instantaneous concurrency under the ceiling. This is a burst measurement, not a quota, SLA, or sustained-throughput claim. Raw record: [gate-d.json](smoke-results/gate-d.json).
+The archived 64-call burst was rejected in 5.3 seconds with upstream `429` errors wrapped as `502`; its report settled zero cost. Together with partial success at 16/32 and the older staggered run, these are observations from that endpoint and time. They do not establish a strict capacity threshold, current quota, SLA, or sustained throughput. Raw record: [gate-d.json](smoke-results/gate-d.json).
 
 ## Preset versus executor
 
@@ -115,16 +115,15 @@ The DSH `浪潮模式` preset registers a model-visible persona and tool set; it
 
 ## Quick start
 
-From the workspace root on Windows:
+From the cloned repository directory on Windows:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
-.\.venv\Scripts\python -m pip install -e ".\浪潮模式[dev]"
-Set-Location .\浪潮模式
-python -B -m unittest discover -s tests -v
-python -m build --sdist --wheel --outdir dist
-python scripts/verify_release.py --dist dist
+.\.venv\Scripts\python -m pip install -e ".[dev]"
+.\.venv\Scripts\python -B -m unittest discover -s tests -v
+.\.venv\Scripts\python -m build --sdist --wheel --outdir dist
+.\.venv\Scripts\python scripts/verify_release.py --dist dist
 ```
 
 See [docs/QUICKSTART.zh-CN.md](docs/QUICKSTART.zh-CN.md) for the minimal DAG and the optional real-adapter command. See [docs/ADAPTER-CONTRACT.zh-CN.md](docs/ADAPTER-CONTRACT.zh-CN.md) for the `WorkerAdapter` boundary, the decorator composition order and the audit surface. See [CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md) for clean submission and fixture-attribution rules.
@@ -167,7 +166,7 @@ with DAGScheduler("demo.sqlite3", max_workers=4) as scheduler:
 
 [preset-langchao.patch.yml](preset-langchao.patch.yml) is an overlay example for a user profile; it does not modify the current DSH profile automatically. Merge its patch into the profile's `cordis.patch.yml` (back the file up first), refresh the DSH page, restart the Host if needed, and pick **浪潮模式** in the mode selector. It keeps standard/ptc/minimal/cordis and adds `preset-langchao`. To ship it in a distribution, move the preset into `dsh-web-app/presets/` and update the package files and bundle patch.
 
-`WorkerAdapter` is the stable seam. The scheduler never guesses at or calls a DSH Service directly. `surge_cluster.HttpWorkerAdapter` is a first-class library adapter aimed at an authorized local reverse proxy or a compatible Messages endpoint; a direct Python-to-DSH `llm.stream` business-Service bridge still has to be implemented and reviewed in a Host plugin. Profile patches only register model-visible modes and tool sets; multi-process and multi-host execution need a separate runtime design.
+`WorkerAdapter` is the stable seam. The scheduler never guesses at or calls a DSH Service directly. `surge_cluster.HttpWorkerAdapter` is a first-class library adapter aimed at an authorized local reverse proxy or a compatible Messages endpoint; the Host plugin in `dsh-bridge/` translates `ctx.llm.stream` to that protocol. Its live activation remains unverified. Profile patches only register model-visible modes and tool sets; multi-process and multi-host execution need a separate runtime design.
 
 ## Scope and non-goals
 

@@ -37,7 +37,7 @@
 
 ## 发布状态
 
-当前为 `v0.1.0` 级别的技术预览。已经具备：单机调度内核、离线回放、artifact/evidence 校验、库内一等公民的真实模型适配器 `surge_cluster.HttpWorkerAdapter`、把它串成一条命令的 `dsh-surge-run`、进程级硬隔离 `IsolatedAdapter`、独立验证器（确定性 + 模型侧）与 claim provenance、envelope 落库、DSH Host `llm.stream` 直连 bridge（`dsh-bridge/`，协议层已自测，激活需重启 Host），以及真实并发测量：Gate C（3 案例 / `max_workers=2`）与 Gate D（16/32/64 档容量曲线，实测突发上限位于 32 与 64 之间）。尚未完成：直接 DSH Host `llm.stream` bridge 的端到端激活验证、稳定配额或 SLA 结论、多节点演进。真实调用是显式选择的网络行为，不属于默认回归测试。
+当前为 `v0.1.0` 级别的技术预览。已经具备：单机调度内核、离线回放、artifact/evidence 校验、库内一等公民的真实模型适配器 `surge_cluster.HttpWorkerAdapter`、把它串成一条命令的 `dsh-surge-run`、进程级硬隔离 `IsolatedAdapter`、独立验证器（确定性 + 模型侧）与 claim provenance、envelope 落库、DSH Host `llm.stream` 直连 bridge（`dsh-bridge/`，协议层已自测，激活需重启 Host），以及真实并发测量：Gate C（3 案例 / `max_workers=2`）与 Gate D（16/32/64 档容量曲线，归档运行中 16/32 档部分成功、64 档全失败，仅代表当时指定端点的观测）。尚未完成：直接 DSH Host `llm.stream` bridge 的端到端激活验证、稳定配额或 SLA 结论、多节点演进。真实调用是显式选择的网络行为，不属于默认回归测试。
 
 ## 当前能力
 
@@ -67,7 +67,7 @@
 - `build_provenance`：从只读审计接口重建 node/artifact/claim 图，报告 digest 不一致等完整性发现
 - envelope 落库：成功与验证失败的 attempt 都保存 envelope（超限时写保留 claim 的投影并附 hash），因此运行结束后仍能重建 claim 级 provenance
 - 只读审计面：`snapshot`、`artifacts`、`read_artifact`、`events`、`budget_snapshot`、`envelopes`，用于外部复核而不参与调度决策
-- DSH Host bridge：`dsh-bridge/dsh-llm-bridge.mjs` 把 `ctx.llm.stream` 映射为 Anthropic SSE，使 Python 侧复用同一个 `HttpWorkerAdapter`；回环限定端口 + token 鉴权 + 并发上限，`node dsh-bridge/selftest.mjs` 有 34 项自测
+- DSH Host bridge：`dsh-bridge/dsh-llm-bridge.mjs` 把 `ctx.llm.stream` 映射为 Anthropic SSE，使 Python 侧复用同一个 `HttpWorkerAdapter`；回环限定端口 + token 鉴权 + 并发上限，`node dsh-bridge/selftest.mjs` 提供离线协议自测
 
 内部 `wave` 从 0 开始（`wave=0` 是用户概念中的 Wave 1/Scout），后续为 `wave=1/2/3`；preset 的自然语言 Wave 1–4 不改变这一内部编号。
 
@@ -75,30 +75,18 @@
 
 ## 安装与运行测试
 
-从工作区根目录创建干净开发环境并安装：
+在克隆后的仓库根目录创建开发环境，后续命令始终使用同一虚拟环境：
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
-.\.venv\Scripts\python -m pip install -e ".\浪潮模式[dev]"
+.\.venv\Scripts\python -m pip install -e ".[dev]"
+.\.venv\Scripts\python -B -m unittest discover -s tests -v
+.\.venv\Scripts\python -m build --sdist --wheel --outdir dist
+.\.venv\Scripts\python scripts/verify_release.py --dist dist
 ```
 
-也可以直接进入项目目录运行测试（项目运行时无第三方依赖）：
-
-```powershell
-Set-Location .\浪潮模式
-python -B -m unittest discover -s tests -v
-python -m build --sdist --wheel --outdir dist
-python scripts/verify_release.py --dist dist
-```
-
-从工作区根目录运行的等价测试命令是：
-
-```powershell
-python -B -m unittest discover -s .\浪潮模式\tests -v
-```
-
-预期：回归测试全部通过，release verifier 输出 `release verification passed`。
+Linux/macOS 将 Python 路径替换为 `.venv/bin/python`。预期回归全部通过，发布检查输出 `release verification passed`；数量以本次命令输出为准。
 
 ## 最小使用
 
@@ -135,13 +123,13 @@ with DAGScheduler("demo.sqlite3", max_workers=4) as scheduler:
 先离线校验计划（不产生任何网络调用）：
 
 ```powershell
-python run_dag.py --plan plan.json --output report.json --dry-run
+.\.venv\Scripts\python run_dag.py --plan plan.json --output report.json --dry-run
 ```
 
 确认计划与依赖无误后，再显式授权真实调用：
 
 ```powershell
-python run_dag.py --plan plan.json --output report.json `
+.\.venv\Scripts\python run_dag.py --plan plan.json --output report.json `
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
@@ -161,6 +149,6 @@ DSH 的 `浪潮模式` preset 只注册模型可见的 persona 与工具组合�
 
 ## DSH 接入边界
 
-本目录的 `WorkerAdapter` 是稳定的接入缝隙；调度器不猜测或直接调用 DSH Service。真实模型适配器 `surge_cluster.HttpWorkerAdapter` 已经是库的一等公民，并通过 `DAGScheduler -> HttpWorkerAdapter` 验证失败可持久化、envelope 和预算边界；它面向本地 reverse proxy 或兼容的 Messages endpoint，Python 到 DSH `llm.stream` business Service 的直接 bridge 仍待在 Host 插件中实现和审查。下一阶段应将 DSH 真实 Agent/LLM 调用映射为 `run(node, context) -> WorkerResult`，并继续把并发、预算和状态留在 Host 侧。profile patch 只注册模型可见的模式与工具组合，多进程或多机运行需要另外的运行时设计。
+本目录的 `WorkerAdapter` 是稳定的接入缝隙；调度器不猜测或直接调用 DSH Service。真实模型适配器 `surge_cluster.HttpWorkerAdapter` 已经是库的一等公民，并通过 `DAGScheduler -> HttpWorkerAdapter` 验证失败可持久化、envelope 和预算边界；它面向本地 reverse proxy 或兼容的 Messages endpoint，Host 插件 `dsh-bridge/` 已把 `ctx.llm.stream` 映射到同一协议，真实 Host 激活后的端到端调用仍未验证；并发、预算和状态继续由调度器管理。profile patch 只注册模型可见的模式与工具组合，多进程或多机运行需要另外的运行时设计。
 
 失败或重试 attempt 的 artifact 绑定会删除；内容寻址文件本身可能暂时保留，生产环境应按未引用 digest 定期 GC。依赖证据在 adapter context 中提供 `dependency_id/name` 和 digest；短名称仅在无歧义时提供，当前节点与依赖同名时当前节点短名称优先。

@@ -12,8 +12,8 @@
 验证函数 ``V`` 是运行后的**偏函数**：``V(claim, 已解析证据) -> {passed, score, issues}``。
 它必须满足一条不变量——**非破坏性**：
 
-    verify(x) 只允许对 x 附加标注；envelope 的既有字段与所有已提交 artifact
-    保持逐字节不变。
+    验证与装饰器不修改输入对象；装饰器返回的 envelope 副本可附加标注与
+    warnings，并合并模型验证用量。worker 的 answer、claims 与 artifact 正文保持不变。
 
 由此还能得到一条组合性质：把 verifier 叠进任意 adapter 只能增加失败，不能把已经
 失败的结论洗成通过（``verdict = 结构校验 ∧ (policy=annotate ∨ V.passed)``）。
@@ -22,10 +22,9 @@
 
 已知边界
 --------
-调度器持久化 nodes/attempts/artifacts/events/ledger，但**不持久化 envelope**，
-因此运行结束后只能重建 node→artifact 层；claim→artifact 层需要调用方提供
-（``VerifyingAdapter`` 在内存中保留，或由 Gate 类脚本显式传入）。把 envelope 落库
-是后续可以单独评审的 schema 变更，这里不顺手改动热路径。
+调度器按 attempt 持久化成功与验证失败的 envelope，超限时保留带哈希的
+claim 投影，无法表示时明确标记 unavailable。provenance 优先使用落库记录，
+其 claim 层可用性取决于实际保存的记录，不依赖当前进程的内存列表。
 """
 
 from __future__ import annotations
@@ -137,7 +136,7 @@ class EvidenceVerifier:
        ``read_artifact``）；默认记为 info，``require_content=True`` 时升级为错误；
     4. ``self_reference``：claim 的全部证据只来自产生它的同一节点，缺少独立来源；
     5. ``answer_absent``：``require_answer_in_evidence=True`` 且 envelope 的答案数字
-       在任何可读证据中都不出现。
+       未全部得到可读证据支持；此检查不进行单位或科学语义判断。
     """
 
     name = "evidence-verifier"
@@ -569,16 +568,16 @@ class ModelVerifier:
 class VerifyingAdapter:
     """在任意 adapter 外层附加验证，默认只标注、不改写。
 
-    ``policy="fail"`` 时验证失败会让该节点失败；两种策略都不修改内层返回的
-    envelope 字段与 artifact 正文，只在 ``envelope["verification"]`` 与
-    ``warnings`` 上追加信息。
+    ``policy="fail"`` 时验证失败会让该节点失败。原始 envelope 不被修改；
+    返回副本追加 verification/warnings，模型验证用量合并进 usage，
+    answer、claims 与 artifact 正文保留。
     """
 
     def __init__(
         self,
         inner: Any,
         *,
-        verifier: EvidenceVerifier | None = None,
+        verifier: Any = None,
         policy: str = "annotate",
     ):
         if not callable(getattr(inner, "run", None)):
@@ -593,7 +592,7 @@ class VerifyingAdapter:
         self.records: list[dict[str, Any]] = []
 
     def verification_report(self) -> dict[str, Any]:
-        """汇总本次进程中每个节点的验证结论，供报告与 provenance 使用。"""
+        """汇总本进程验证记录快照；nodes_verified 保留历史字段名，重试也计一条记录。"""
         records = list(self.records)
         passed = sum(1 for record in records if record["verification"]["passed"])
         return {

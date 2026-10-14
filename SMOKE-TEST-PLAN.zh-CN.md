@@ -129,7 +129,7 @@ python benchmark_gate_d.py `
 
 任务固定为返回一个极小的 JSON 对象，`max_attempts=1`（不重试掩盖失败），每个档位一次发起 N 个并发调用。报告给出每档的 submitted / returned_valid / valid_rate / 失败分类 / 峰值并发 / wall / 延迟分位 / 成本。
 
-**执行状态**：Gate D 已于 2026-10-04T03:25:30Z 执行。16 并发 13/16、32 并发 27/32、64 并发 **0/64**（全部为上游 429，5.3 秒整批拒绝，成本 0），即该 endpoint 的突发上限位于 32 与 64 之间。详见 [smoke-results/README.zh-CN.md](smoke-results/README.zh-CN.md) 与 [BENCHMARKS.zh-CN.md](BENCHMARKS.zh-CN.md) 第 6 节。这仍不是稳定配额或 SLA 结论。
+**执行状态**：Gate D 已于 2026-10-04T03:25:30Z 执行。16 并发 13/16、32 并发 27/32、64 并发 **0/64**（全部为上游 429，5.3 秒整批拒绝，成本 0），这是当时指定端点的离散档位观测，不能由部分成功定位严格并发上限。详见 [smoke-results/README.zh-CN.md](smoke-results/README.zh-CN.md) 与 [BENCHMARKS.zh-CN.md](BENCHMARKS.zh-CN.md) 第 6 节。这仍不是稳定配额或 SLA 结论。
 
 ## 暂不纳入首轮
 

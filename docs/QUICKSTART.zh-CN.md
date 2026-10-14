@@ -9,7 +9,7 @@
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
-.\.venv\Scripts\python -m pip install -e ".\浪潮模式[dev]"
+.\.venv\Scripts\python -m pip install -e ".[dev]"
 ```
 
 Linux/macOS 将 Python 路径替换为 `.venv/bin/python`。
@@ -17,8 +17,7 @@ Linux/macOS 将 Python 路径替换为 `.venv/bin/python`。
 ## 2. 运行最小 DAG
 
 ```powershell
-Set-Location .\浪潮模式
-python -c "from surge_cluster import DAGScheduler, LocalEchoAdapter, NodeSpec, RunSpec; r=RunSpec(id='quickstart', budget_cost=10, max_nodes=2, max_workers=2); n=[NodeSpec(id='scout', prompt='收集证据'), NodeSpec(id='synthesize', prompt='汇总证据', depends_on=('scout',), wave=1)]; s=DAGScheduler('quickstart.sqlite3', max_workers=2); s.submit(r,n); print(s.execute(LocalEchoAdapter()).status); s.close()"
+.\.venv\Scripts\python -c "from surge_cluster import DAGScheduler, LocalEchoAdapter, NodeSpec, RunSpec; r=RunSpec(id='quickstart', budget_cost=10, max_nodes=2, max_workers=2); n=[NodeSpec(id='scout', prompt='收集证据'), NodeSpec(id='synthesize', prompt='汇总证据', depends_on=('scout',), wave=1)]; s=DAGScheduler('quickstart.sqlite3', max_workers=2); s.submit(r,n); print(s.execute(LocalEchoAdapter()).status); s.close()"
 ```
 
 预期输出：
@@ -39,9 +38,9 @@ Remove-Item -Recurse -Force .\quickstart-artifacts -ErrorAction SilentlyContinue
 ## 3. 运行回归与构建
 
 ```powershell
-python -B -m unittest discover -s tests -v
-python -m build --sdist --wheel --outdir dist
-python scripts/verify_release.py --dist dist
+.\.venv\Scripts\python -B -m unittest discover -s tests -v
+.\.venv\Scripts\python -m build --sdist --wheel --outdir dist
+.\.venv\Scripts\python scripts/verify_release.py --dist dist
 ```
 
 当前项目没有运行时第三方依赖；`build` 仅用于开发构建，已在 `[dev]` extra 中声明。
@@ -64,13 +63,13 @@ python scripts/verify_release.py --dist dist
 先离线校验（无网络调用）：
 
 ```powershell
-python run_dag.py --plan plan.json --output report.json --dry-run
+.\.venv\Scripts\python run_dag.py --plan plan.json --output report.json --dry-run
 ```
 
 确认后再显式授权真实调用：
 
 ```powershell
-python run_dag.py --plan plan.json --output report.json `
+.\.venv\Scripts\python run_dag.py --plan plan.json --output report.json `
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
@@ -80,6 +79,7 @@ python run_dag.py --plan plan.json --output report.json `
 
 - `--isolate`：每次模型调用放进独立子进程，获得硬超时与严格物理并发（超时会被 terminate/kill）；
 - `--verify annotate|fail|off`：是否对每个节点做独立证据验证；`fail` 会让验证失败的节点失败并阻断下游；
+- `--api-key`：传递 endpoint/bridge 鉴权键，报告中的非占位值会脱敏；可由 shell 从本机 token 文件读取，避免在历史中写字面值；
 - `--no-provenance`：报告省略 claim/artifact provenance 段。
 
 计划的 `schema_version` 必须为 `1`；未知字段、重复 id、悬空依赖和 `max_nodes` 小于节点数都会被拒绝。`node.max_tokens` 是单次调用的预算预留上限（输入+输出），真实请求的输出上限为 `min(--max-output-tokens, node.max_tokens)`。
@@ -89,7 +89,7 @@ python run_dag.py --plan plan.json --output report.json `
 只有在你明确授权、并且本地反代已经运行时才执行：
 
 ```powershell
-python benchmark_gate_c.py `
+.\.venv\Scripts\python benchmark_gate_c.py `
   --fixture tests\fixtures\finqa\smoke.jsonl `
   --manifest tests\fixtures\finqa\MANIFEST.json `
   --endpoint http://127.0.0.1:17800/v1/messages `
@@ -107,7 +107,7 @@ Gate C 的结论只在"这三个案例在这条 endpoint 上完成"这一层成�
 真实调用不是默认测试，需要一个已经授权的 Anthropic-compatible 本地适配器：
 
 ```powershell
-python benchmark_real_adapter_smoke.py `
+.\.venv\Scripts\python benchmark_real_adapter_smoke.py `
   --fixture tests\fixtures\finqa\smoke.jsonl `
   --manifest tests\fixtures\finqa\MANIFEST.json `
   --record-id C/2017/page_328.pdf-1 `
@@ -121,7 +121,7 @@ python benchmark_real_adapter_smoke.py `
 ## 7. 非目标
 
 - 跨机器队列、Kubernetes 调度器与 GPU 资源管理器都不在范围内；
-- 不自动创建 DSH Agent/LLM bridge；
+- bridge 插件不会自动修改 profile 或重启 Host，真实 Host 激活仍需单独验证；
 - 不把离线回放当作模型能力证明；
 - 不保证 exactly-once；
 - 默认线程路径的超时是协作式的；需要硬超时请加 `--isolate`，它用子进程 terminate/kill 实现；
