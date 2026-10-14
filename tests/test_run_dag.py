@@ -187,6 +187,24 @@ class RunDagCliTests(unittest.TestCase):
         code, report, _ = run_dag.run(["--plan", str(self.plan), "--output", str(self.output), *extra])
         return code, report
 
+    def test_returned_report_does_not_share_live_adapter_call_list(self) -> None:
+        class RecordingEcho(run_dag.LocalEchoAdapter):
+            def __init__(self):
+                self.calls = []
+
+            def run(self, node, context):
+                self.calls.append({"node_id": node.id})
+                return super().run(node, context)
+
+        self._write_plan()
+        adapter = RecordingEcho()
+        with mock.patch.object(run_dag, "_build_adapter", return_value=(adapter, None)):
+            code, report = self._run("--dry-run")
+        self.assertEqual(code, 0)
+        count = len(report["adapter_calls"])
+        adapter.calls.append({"node_id": "late"})
+        self.assertEqual(len(report["adapter_calls"]), count)
+
     def test_dry_run_executes_plan_offline(self) -> None:
         self._write_plan()
         code, report = self._run("--dry-run")

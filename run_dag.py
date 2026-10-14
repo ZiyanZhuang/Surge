@@ -262,7 +262,7 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path | None
     }
     calls = getattr(adapter, "calls", None) or getattr(getattr(adapter, "inner", None), "calls", None)
     if calls:
-        report["adapter_calls"] = calls
+        report["adapter_calls"] = list(calls)
     summary = getattr(adapter, "verification_report", None)
     if callable(summary):
         report["verification"] = summary()

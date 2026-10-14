@@ -594,13 +594,14 @@ class VerifyingAdapter:
 
     def verification_report(self) -> dict[str, Any]:
         """汇总本次进程中每个节点的验证结论，供报告与 provenance 使用。"""
-        passed = sum(1 for record in self.records if record["verification"]["passed"])
+        records = list(self.records)
+        passed = sum(1 for record in records if record["verification"]["passed"])
         return {
             "policy": self.policy,
             "verifier": self.verifier.name,
-            "nodes_verified": len(self.records),
+            "nodes_verified": len(records),
             "nodes_passed": passed,
-            "records": list(self.records),
+            "records": records,
         }
 
     def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:

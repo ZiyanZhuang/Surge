@@ -274,6 +274,22 @@ class VerifyingAdapterTests(unittest.TestCase):
         self.assertEqual(caught.exception.result.envelope["answer"], "42")
         self.assertFalse(caught.exception.result.envelope["verification"]["passed"])
 
+    def test_verification_report_counts_one_snapshot_during_concurrent_append(self) -> None:
+        first = {"node_id": "first", "verification": {"passed": True}}
+        late = {"node_id": "late", "verification": {"passed": True}}
+
+        class AppendingRecords(list):
+            def __iter__(self):
+                yield from self[:]
+                self.append(late)
+
+        adapter = VerifyingAdapter(self._inner())
+        adapter.records = AppendingRecords([first])
+        summary = adapter.verification_report()
+        self.assertEqual(summary["nodes_verified"], len(summary["records"]))
+        self.assertEqual(summary["nodes_passed"], sum(record["verification"]["passed"] for record in summary["records"]))
+        self.assertGreater(len(adapter.records), len(summary["records"]))
+
     def test_verification_report_summarizes_records(self) -> None:
         adapter = VerifyingAdapter(self._inner(), policy="annotate")
         adapter.run(_node(), {})
