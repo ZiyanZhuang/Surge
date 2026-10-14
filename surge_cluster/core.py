@@ -1641,6 +1641,7 @@ class DAGScheduler:
                             "stage": stage_name,
                             "route": None if decision is None else decision.as_dict(),
                             "cancel_event": threading.Event(),
+                            "dispatch_ready": threading.Event(),
                         }
 
                         def heartbeat_callback(
@@ -1675,6 +1676,10 @@ class DAGScheduler:
                         dispatch_info["context"] = context
                         def run_worker(node: NodeSpec = node, context: Mapping[str, Any] = context, info: dict[str, Any] = dispatch_info) -> WorkerResult:
                             try:
+                                # submit 可在入队后启动线程失败，先等 Host 确认派发。
+                                info["dispatch_ready"].wait()
+                                if info["cancel_event"].is_set():
+                                    raise AdapterFailure("worker cancelled before dispatch", kind="cancelled")
                                 result = adapter.run(node, context)
                                 info["completed"] = result
                                 return result
@@ -1684,7 +1689,14 @@ class DAGScheduler:
                             finally:
                                 info["finished_at"] = time.time()
 
-                        future = executor.submit(run_worker)
+                        try:
+                            future = executor.submit(run_worker)
+                        except Exception as exc:
+                            dispatch_info["cancel_event"].set()
+                            self._fail_attempt(run_id, dispatch_info, f"worker dispatch failed: {exc}", events)
+                            continue
+                        finally:
+                            dispatch_info["dispatch_ready"].set()
                         active[future] = dispatch_info
                         dispatched_by_stage[stage_name] = dispatched_by_stage.get(stage_name, 0) + 1
                         dispatched_value_by_stage[stage_name] = dispatched_value_by_stage.get(stage_name, 0.0) + max(0.0, node.incremental_value)

@@ -165,6 +165,59 @@ class CancellationAdapter:
 
 
 class CoreTests(unittest.TestCase):
+    def test_failed_worker_dispatch_settles_attempts_without_orphan_calls(self):
+        real_executor = concurrent.futures.ThreadPoolExecutor
+        for after_enqueue in (False, True):
+            with self.subTest(after_enqueue=after_enqueue):
+                failed = threading.Event()
+                pools = []
+
+                class FaultyExecutor(real_executor):
+                    submissions = 0
+
+                    def submit(self, function, *args, **kwargs):
+                        self.submissions += 1
+                        if self.submissions != 2:
+                            return super().submit(function, *args, **kwargs)
+                        if after_enqueue:
+                            super().submit(function, *args, **kwargs)
+                        failed.set()
+                        raise RuntimeError("injected worker launch failure")
+
+                    def __init__(self, *args, **kwargs):
+                        super().__init__(*args, **kwargs)
+                        pools.append(self)
+
+                class WaitingAdapter(CountingAdapter):
+                    def run(self, node, context):
+                        if node.id == "a":
+                            if not failed.wait(2):
+                                raise RuntimeError("second dispatch did not arrive")
+                        return super().run(node, context)
+
+                adapter = WaitingAdapter()
+                error = None
+                result = None
+                with self.scheduler(self._run_dir()) as scheduler:
+                    scheduler.submit(RunSpec("launch-failure", max_workers=2), [NodeSpec(name, name, max_attempts=1) for name in ("a", "b")])
+                    try:
+                        with mock.patch("surge_cluster.core.concurrent.futures.ThreadPoolExecutor", FaultyExecutor):
+                            result = scheduler.execute(adapter, "launch-failure")
+                    except RuntimeError as exc:
+                        error = str(exc)
+                    finally:
+                        for pool in pools:
+                            pool.shutdown(wait=True)
+                    self.assertIsNone(error, error)
+                    self.assertEqual(result.status, "failed")
+                    self.assertEqual(adapter.calls, {"a": 1})
+                    self.assertEqual(result.succeeded, ("a",))
+                    self.assertEqual(result.failed, ("b",))
+                    self.assertAlmostEqual(result.spent_cost, 0.001)
+                    self.assertEqual(scheduler.budget_snapshot("launch-failure")["reserved_cost"], 0)
+                    self.assertEqual(len(scheduler.events("launch-failure", "task.failed")), 1)
+                    self.assertEqual(len(scheduler.events("launch-failure", "run.completed")), 1)
+
     def _run_dir(self):
         directory = Path(__file__).resolve().parents[1] / f".test-run-{uuid.uuid4().hex}"
         directory.mkdir()
