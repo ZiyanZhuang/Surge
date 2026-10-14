@@ -957,8 +957,11 @@ class DAGScheduler:
             ).rowcount
             if changed:
                 self._event_once(run_id, None, "run.cancel_requested", None)
-            # 取消由另一个 scheduler 发起时，也要立即结束数据库中的 running
-            # attempt 并释放 reservation；本地 execute 后续只需丢弃其 future。
+            run = self._get_run(run_id)
+            if run["owner_id"] and run["owner_lease_until"] > time.time():
+                # 活跃 owner 掌握已返回的 usage，由它结算并发出停止信号。
+                return
+            # 无有效 owner 时直接释放 reservation，不依赖已失联的执行循环。
             for attempt in self._conn.execute(
                 "SELECT id,node_id FROM attempts WHERE run_id=? AND status='running'",
                 (run_id,),
@@ -1654,7 +1657,12 @@ class DAGScheduler:
                         dispatch_info["context"] = context
                         def run_worker(node: NodeSpec = node, context: Mapping[str, Any] = context, info: dict[str, Any] = dispatch_info) -> WorkerResult:
                             try:
-                                return adapter.run(node, context)
+                                result = adapter.run(node, context)
+                                info["completed"] = result
+                                return result
+                            except AdapterFailure as exc:
+                                info["completed"] = exc.result
+                                raise
                             finally:
                                 info["finished_at"] = time.time()
 
@@ -1720,6 +1728,8 @@ class DAGScheduler:
     def _fail_attempt(self, run_id: str, info: Mapping[str, Any], error: str, events: list[str], completed: WorkerResult | None = None) -> None:
         node: NodeSpec = info["node"]
         attempt_id = info["attempt_id"]
+        if completed is None:
+            completed = info.get("completed")
         with self._lock, self._conn:
             run = self._get_run(run_id)
             actual, envelope_record = 0.0, None

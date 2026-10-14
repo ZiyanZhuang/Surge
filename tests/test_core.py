@@ -531,6 +531,51 @@ class CoreTests(unittest.TestCase):
                         result = scheduler.execute(CountingAdapter())
                     self.assertEqual(result.status, "succeeded")
 
+    def test_observed_completed_cost_is_retained_on_timeout_or_cancel(self):
+        original_wait = concurrent.futures.wait
+        for cancel in ("timeout", "local", "remote"):
+            with self.subTest(cancel=cancel):
+                directory = self._run_dir()
+                with self.scheduler(directory) as scheduler:
+                    scheduler.submit(RunSpec("paid-stop"), [NodeSpec("n", "work", max_attempts=1, timeout_seconds=0.02 if cancel == "timeout" else 5)])
+
+                    def delayed_wait(futures, **kwargs):
+                        done, pending = original_wait(futures, timeout=5)
+                        if cancel != "timeout":
+                            if cancel == "remote":
+                                with self.scheduler(directory) as other:
+                                    other.cancel("paid-stop")
+                            else:
+                                scheduler.cancel("paid-stop")
+                            return set(), pending | done
+                        return done, pending
+
+                    with mock.patch("surge_cluster.core.concurrent.futures.wait", side_effect=delayed_wait):
+                        result = scheduler.execute(CountingAdapter(delay=0.04))
+                    self.assertEqual(result.status, "failed" if cancel == "timeout" else "cancelled")
+                    self.assertAlmostEqual(result.spent_cost, 0.001)
+                    attempt = scheduler._conn.execute("SELECT cost,status FROM attempts").fetchone()
+                    self.assertEqual(attempt["status"], "failed")
+                    self.assertAlmostEqual(attempt["cost"], 0.001)
+                    self.assertEqual(scheduler.artifacts("paid-stop"), [])
+
+    def test_cancel_without_a_live_owner_releases_reservation_once(self):
+        directory = self._run_dir()
+        with self.scheduler(directory) as scheduler:
+            scheduler.submit(RunSpec("orphan-cancel"), [NodeSpec("n", "work")])
+            with scheduler._conn:
+                run = scheduler._get_run("orphan-cancel")
+                node = scheduler._get_nodes("orphan-cancel")["n"]
+                scheduler._reserve(run, node, "orphan")
+                scheduler._conn.execute("UPDATE runs SET status='running',owner_id='gone',owner_lease_until=0 WHERE id='orphan-cancel'")
+                scheduler._conn.execute("UPDATE nodes SET status='running',attempt_count=1,current_attempt_id='orphan' WHERE run_id='orphan-cancel'")
+                scheduler._conn.execute("INSERT INTO attempts(id,run_id,node_id,number,status,lease_until,started_at) VALUES('orphan','orphan-cancel','n',1,'running',0,0)")
+            scheduler.cancel("orphan-cancel")
+            scheduler.cancel("orphan-cancel")
+            self.assertEqual(scheduler._get_run("orphan-cancel")["reserved_cost"], 0)
+            self.assertEqual(scheduler.snapshot("orphan-cancel")[0]["status"], "cancelled")
+            self.assertEqual(scheduler._conn.execute("SELECT COUNT(*) FROM budget_ledger WHERE operation='release'").fetchone()[0], 1)
+
     def test_deadline_cas_failure_settles_attempt_and_reservation(self):
         class SlowEnvelope(dict):
             def __init__(self, *args, **kwargs):
