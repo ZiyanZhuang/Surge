@@ -83,29 +83,31 @@ def default_answer_extractor(text: str) -> str | None:
 def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
     """解析 SSE 负载，返回 (文本, usage, 事件名序列)。
 
-    只收集 ``text_delta`` 和 ``message_delta.usage``；损坏帧、显式 error
+    收集 ``text_delta``，合并 message_start 输入与 message_delta 累计 usage；损坏帧、显式 error
     与重复/结束后的消息事件在解析边界 fail-closed。
     """
     try:
-        text = payload.decode("utf-8")
+        text = payload.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
     except UnicodeDecodeError as exc:
         raise AdapterFailure("adapter SSE is not valid UTF-8", kind="sse") from exc
     events: list[str] = []
     output: list[str] = []
     usage: dict[str, Any] | None = None
-    for frame in text.split("\n\n"):
+    start_usage: dict[str, Any] = {}
+    for frame in text.split("\n\n")[:-1]:
         event_name = None
         data = None
+        data_lines: list[str] = []
         for line in frame.splitlines():
             if line.startswith("event:"):
                 event_name = line[6:].strip()
             elif line.startswith("data:"):
-                raw = line[5:].strip()
-                if raw:
-                    try:
-                        data = json.loads(raw)
-                    except json.JSONDecodeError as exc:
-                        raise AdapterFailure("adapter SSE contains invalid JSON", kind="sse") from exc
+                data_lines.append(line[5:].lstrip(" "))
+        if data_lines:
+            try:
+                data = json.loads("\n".join(data_lines))
+            except json.JSONDecodeError as exc:
+                raise AdapterFailure("adapter SSE contains invalid JSON", kind="sse") from exc
         if event_name:
             if event_name == "error":
                 raise AdapterFailure("adapter SSE contains an upstream error event", kind="sse")
@@ -121,6 +123,11 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
             events.append(event_name)
         if not isinstance(data, dict):
             continue
+        if event_name == "message_start":
+            message = data.get("message")
+            candidate = message.get("usage") if isinstance(message, dict) else None
+            if isinstance(candidate, dict) and "input_tokens" in candidate:
+                start_usage = {"input_tokens": candidate["input_tokens"]}
         if event_name == "content_block_delta":
             delta = data.get("delta")
             if not isinstance(delta, dict):
@@ -132,7 +139,7 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
         if event_name == "message_delta":
             candidate = data.get("usage")
             if isinstance(candidate, dict):
-                usage = candidate
+                usage = {**(usage or start_usage), **candidate}
     return "".join(output), usage, events
 
 

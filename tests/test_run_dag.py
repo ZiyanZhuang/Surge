@@ -163,6 +163,13 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(report["result"]["failed"], ["scout"])
         self.assertEqual(report["adapter_calls"][0]["kind"], "sse")
 
+    def test_cli_consumes_crlf_sse(self) -> None:
+        _FakeHandler.payload = _sse().replace(b"\n", b"\r\n")
+        self._write_plan()
+        code, report = self._run("--endpoint", self.url)
+        self.assertEqual(code, 0)
+        self.assertEqual(report["result"]["status"], "succeeded")
+
     def test_duplicate_node_id_is_rejected(self) -> None:
         mapping = _plan_mapping()
         mapping["nodes"][1]["id"] = "scout"

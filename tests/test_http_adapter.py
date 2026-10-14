@@ -221,6 +221,24 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, "failed")
         self.assertEqual(adapter.calls[-1]["kind"], "sse")
 
+    def test_standard_sse_framing_and_split_usage(self) -> None:
+        payload = _sse().replace(
+            b'{"type":"message_start"}',
+            b'{"type":"message_start","message":{"usage":{"input_tokens":10,"output_tokens":0}}}',
+        ).replace(b'{"input_tokens": 10, "output_tokens": 75}', b'{"output_tokens":75}')
+        payload = payload.replace(b'data: {"usage": {"output_tokens":75}}', b'data: {"usage":\ndata: {"output_tokens":75}}')
+        for newline in (b'\n', b'\r\n', b'\r'):
+            with self.subTest(newline=newline):
+                _FakeHandler.payload = b'\xef\xbb\xbf' + payload.replace(b'\n', newline)
+                result = self._adapter().run(NodeSpec("n", "work"), {})
+                self.assertEqual(result.envelope["usage"]["total_tokens"], 85)
+
+    def test_unterminated_sse_stop_is_not_a_complete_event(self) -> None:
+        _FakeHandler.payload = _sse().rstrip(b'\n')
+        with self.assertRaises(AdapterFailure) as caught:
+            self._adapter().run(NodeSpec("n", "work"), {})
+        self.assertEqual(caught.exception.kind, "sse")
+
     def test_missing_usage_fails_closed(self) -> None:
         _FakeHandler.payload = _sse(include_usage=False)
         adapter = self._adapter()
