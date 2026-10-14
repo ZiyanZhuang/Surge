@@ -713,6 +713,20 @@ class CoreTests(unittest.TestCase):
                     with self.assertRaises(KeyError):
                         scheduler.result(run.id)
 
+    def test_deep_dag_validation_does_not_use_the_python_call_stack(self):
+        for cyclic in (False, True):
+            with self.subTest(cyclic=cyclic):
+                nodes = [NodeSpec(f"n{i}", "work", depends_on=(f"n{i + 1}",) if i < 1199 else ()) for i in range(1200)]
+                if cyclic:
+                    nodes[-1] = NodeSpec("n1199", "work", depends_on=("n0",))
+                with self.scheduler(self._run_dir()) as scheduler:
+                    if cyclic:
+                        with self.assertRaisesRegex(ValueError, "cycle"):
+                            scheduler.submit(RunSpec("deep", max_nodes=1200), nodes)
+                    else:
+                        scheduler.submit(RunSpec("deep", max_nodes=1200), nodes)
+                        self.assertEqual(len(scheduler.snapshot("deep")), 1200)
+
     def test_execute_setup_failure_releases_owner_claim(self):
         directory = self._run_dir()
         artifact_parent = directory / "run-artifacts"

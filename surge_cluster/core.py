@@ -819,24 +819,24 @@ class DAGScheduler:
             if missing:
                 raise ValueError(f"node {node.id} has missing dependencies: {sorted(missing)}")
 
-        # 用 DFS 检查环，保证后续 ready 队列不会永久等待。
+        # 拓扑消除检查环，避免合法长链耗尽 Python 调用栈。
         graph = {node.id: set(node.depends_on) for node in nodes}
-        visiting: set[str] = set()
-        visited: set[str] = set()
-
-        def visit(node_id: str) -> None:
-            if node_id in visiting:
-                raise ValueError("DAG contains a cycle")
-            if node_id in visited:
-                return
-            visiting.add(node_id)
-            for dependency in graph[node_id]:
-                visit(dependency)
-            visiting.remove(node_id)
-            visited.add(node_id)
-
-        for node_id in graph:
-            visit(node_id)
+        remaining = {node_id: len(dependencies) for node_id, dependencies in graph.items()}
+        dependents: dict[str, list[str]] = {node_id: [] for node_id in graph}
+        for node_id, dependencies in graph.items():
+            for dependency in dependencies:
+                dependents[dependency].append(node_id)
+        ready = [node_id for node_id, count in remaining.items() if count == 0]
+        visited = 0
+        while ready:
+            node_id = ready.pop()
+            visited += 1
+            for dependent in dependents[node_id]:
+                remaining[dependent] -= 1
+                if remaining[dependent] == 0:
+                    ready.append(dependent)
+        if visited != len(graph):
+            raise ValueError("DAG contains a cycle")
         wave_by_id = {node.id: node.wave for node in nodes}
         for node in nodes:
             # 反向 wave 边会同时被依赖状态和 wave gate 卡住，必须在提交时拒绝。
