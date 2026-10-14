@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import json
+import io
+import urllib.error
 import sys
 import tempfile
 import threading
@@ -515,6 +517,16 @@ class HttpAdapterTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     call_messages_endpoint(self.url, "model", "work", 1.0, **{name: value})
                 urlopen.assert_not_called()
+
+    def test_http_error_response_is_closed_before_failure_propagates(self) -> None:
+        body = io.BytesIO(b"rejected " * 1000)
+        self.addCleanup(body.close)
+        error = urllib.error.HTTPError(self.url, 401, "unauthorized", {}, body)
+        with mock.patch("surge_cluster.http_adapter.urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(AdapterFailure) as caught:
+                call_messages_endpoint(self.url, "model", "work", 1.0)
+        self.assertEqual(caught.exception.kind, "http")
+        self.assertTrue(body.closed, "retaining the failure must not retain an open HTTP response")
 
     def test_http_errors_do_not_expose_configured_api_key(self) -> None:
         key = "test-http-auth-private-marker"
