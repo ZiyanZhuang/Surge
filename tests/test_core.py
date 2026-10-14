@@ -387,6 +387,43 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(result.status, "succeeded")
             self.assertTrue(scheduler._conn.execute("SELECT 1 FROM events WHERE run_id='migrated'").fetchone())
 
+    def test_ambiguous_legacy_artifacts_are_not_silently_discarded(self):
+        for mode in ("unbound", "duplicate", "null"):
+            with self.subTest(mode=mode):
+                db = self._run_dir() / "legacy-artifacts.sqlite3"
+                with closing(sqlite3.connect(db)) as connection, connection:
+                    if mode == "unbound":
+                        connection.execute("CREATE TABLE artifacts(ref TEXT PRIMARY KEY,path TEXT,sha256 TEXT)")
+                        connection.executemany("INSERT INTO artifacts VALUES(?,?,?)", [("a", "pa", "sa"), ("b", "pb", "sb")])
+                    else:
+                        connection.execute("CREATE TABLE artifacts(ref TEXT PRIMARY KEY,run_id TEXT,node_id TEXT,name TEXT,path TEXT,sha256 TEXT)")
+                        connection.executemany("INSERT INTO artifacts VALUES(?,?,?,?,?,?)", [
+                            ("a", "r", "n", "notes", "pa", "sa"),
+                            ("b", "r", "n", "notes" if mode == "duplicate" else "other", None if mode == "null" else "pb", "sb"),
+                        ])
+                    before = tuple(connection.iterdump())
+                error = None
+                try:
+                    with DAGScheduler(db):
+                        pass
+                except ValueError as exc:
+                    error = str(exc)
+                with closing(sqlite3.connect(db)) as connection:
+                    after = tuple(connection.iterdump())
+                self.assertEqual(after, before, "legacy migration discarded artifact data")
+                self.assertIsNotNone(error)
+                self.assertIn("artifact", error)
+
+    def test_unambiguous_legacy_artifact_bindings_are_preserved(self):
+        db = self._run_dir() / "legacy-artifacts.sqlite3"
+        records = [("r", "a", "notes", "ref-a", "path-a", "sha-a"), ("r", "b", "notes", "ref-b", "path-b", "sha-b")]
+        with closing(sqlite3.connect(db)) as connection, connection:
+            connection.execute("CREATE TABLE artifacts(run_id TEXT,node_id TEXT,name TEXT,ref TEXT PRIMARY KEY,path TEXT,sha256 TEXT)")
+            connection.executemany("INSERT INTO artifacts VALUES(?,?,?,?,?,?)", records)
+        with DAGScheduler(db) as scheduler:
+            migrated = [tuple(row) for row in scheduler._conn.execute("SELECT run_id,node_id,name,ref,path,sha256 FROM artifacts ORDER BY node_id")]
+            self.assertEqual(migrated, records)
+
     def test_previous_schema_gets_additive_demand_columns(self):
         directory = self._run_dir()
         db_path = Path(directory) / "legacy.sqlite3"

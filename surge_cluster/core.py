@@ -563,6 +563,21 @@ class DAGScheduler:
                 self._conn.close()
 
     def _init_db(self) -> None:
+        artifact_info = list(self._conn.execute("PRAGMA table_info(artifacts)"))
+        artifact_columns = {row[1] for row in artifact_info}
+        expected_artifact_pk = ["run_id", "node_id", "name"]
+        required_artifact_columns = {"run_id", "node_id", "name", "ref", "path", "sha256"}
+        if artifact_info and (
+            [row[1] for row in artifact_info if row[5]] != expected_artifact_pk
+            or not required_artifact_columns.issubset(artifact_columns)
+        ):
+            if self._conn.execute("SELECT 1 FROM artifacts LIMIT 1").fetchone():
+                if not required_artifact_columns.issubset(artifact_columns):
+                    raise ValueError("legacy artifacts lack binding columns; manual migration required")
+                has_nulls = self._conn.execute("SELECT 1 FROM artifacts WHERE run_id IS NULL OR node_id IS NULL OR name IS NULL OR ref IS NULL OR path IS NULL OR sha256 IS NULL LIMIT 1").fetchone()
+                has_conflicts = self._conn.execute("SELECT 1 FROM artifacts GROUP BY run_id,node_id,name HAVING COUNT(*)>1 LIMIT 1").fetchone()
+                if has_nulls or has_conflicts:
+                    raise ValueError("legacy artifacts have null fields or conflicting bindings; manual migration required")
         with self._conn:
             self._conn.executescript(
                 """
@@ -656,8 +671,7 @@ class DAGScheduler:
         artifact_info = list(self._conn.execute("PRAGMA table_info(artifacts)"))
         artifact_columns = {row[1] for row in artifact_info}
         artifact_pk = [row[1] for row in artifact_info if row[5]]
-        expected_artifact_pk = ["run_id", "node_id", "name"]
-        if artifact_pk != expected_artifact_pk or not {"run_id", "node_id", "name", "ref", "path", "sha256"}.issubset(artifact_columns):
+        if artifact_pk != expected_artifact_pk or not required_artifact_columns.issubset(artifact_columns):
             self._conn.execute("DROP INDEX IF EXISTS idx_artifacts_node")
             self._conn.execute("ALTER TABLE artifacts RENAME TO artifacts_legacy")
             self._conn.execute(
@@ -673,13 +687,12 @@ class DAGScheduler:
                 )
                 """
             )
-            # 旧 MVP 表通常已经包含这些列；缺列时用空值保留可迁移性，随后由
-            # 完整性检查阻止引用损坏记录，而不会在启动时 no such column。
+            # 只有空的极旧表允许缺列；非空且无法无损映射的表已在建表前拒绝。
             legacy = {row[1] for row in self._conn.execute("PRAGMA table_info(artifacts_legacy)")}
             expression = lambda name, fallback: name if name in legacy else fallback
             self._conn.execute(
                 f"""
-                INSERT OR IGNORE INTO artifacts(run_id,node_id,name,ref,path,sha256)
+                INSERT INTO artifacts(run_id,node_id,name,ref,path,sha256)
                 SELECT {expression('run_id', "''")},{expression('node_id', "''")},
                        {expression('name', "'legacy'")},{expression('ref', "''")},
                        {expression('path', "''")},{expression('sha256', "''")}
