@@ -215,6 +215,10 @@ def encode_envelope_record(envelope: Any, *, max_bytes: int = MAX_PERSISTED_ENVE
     )
 
 
+class RunInitializationError(OSError):
+    """派发 worker 前的运行资源初始化失败，保留 OSError 捕获兼容性。"""
+
+
 class AdapterFailure(RuntimeError):
     """适配器 fail-closed 失败；调度器按失败 attempt 记录并计入重试。
 
@@ -1495,8 +1499,10 @@ class DAGScheduler:
             artifact_store = ArtifactStore(self._artifact_root(run_id))
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=worker_limit)
             executors.append(executor)
-        except BaseException:
+        except BaseException as exc:
             release_claim()
+            if isinstance(exc, OSError):
+                raise RunInitializationError(f"cannot initialize runtime state: {exc}") from exc
             raise
         try:
             while True:

@@ -272,6 +272,27 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(report["error_kind"], "state")
         cleanup.assert_not_called()
 
+    def test_artifact_initialization_failure_is_a_state_error_before_dispatch(self) -> None:
+        self._write_plan()
+        workdir = self.directory / "blocked-artifacts"
+        workdir.mkdir()
+        blocker = workdir / "run-artifacts"
+        blocker.write_text("preserve artifact blocker", encoding="utf-8")
+        code, report = self._run("--endpoint", self.url, "--workdir", str(workdir))
+        self.assertEqual(code, 2)
+        self.assertEqual(report["error_kind"], "state")
+        self.assertEqual(blocker.read_text(encoding="utf-8"), "preserve artifact blocker")
+        self.assertIsNone(_FakeHandler.received)
+        with contextlib.closing(sqlite3.connect(workdir / "run.sqlite3")) as connection:
+            self.assertEqual(connection.execute("SELECT owner_id,owner_lease_until FROM runs").fetchone(), (None, 0))
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM attempts").fetchone()[0], 0)
+
+    def test_execution_io_errors_are_not_misreported_as_initialization(self) -> None:
+        self._write_plan()
+        with mock.patch.object(run_dag.DAGScheduler, "execute", side_effect=OSError("execution I/O failed")):
+            with self.assertRaisesRegex(OSError, "execution I/O failed"):
+                self._run("--dry-run")
+
     def test_dry_run_executes_plan_offline(self) -> None:
         self._write_plan()
         code, report = self._run("--dry-run")

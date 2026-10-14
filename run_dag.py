@@ -36,6 +36,7 @@ from surge_cluster import (
     LocalEchoAdapter,
     NodeSpec,
     PlanError,
+    RunInitializationError,
     RunPlan,
     RunSpec,
     VerifyingAdapter,
@@ -222,7 +223,10 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path | None
                 scheduler.submit(run_spec, nodes)
             except ValueError as exc:
                 return 2, _error_report("plan", str(exc)), args.output
-            result = scheduler.execute(adapter)
+            try:
+                result = scheduler.execute(adapter)
+            except RunInitializationError as exc:
+                return 2, _error_report("state", str(exc)), args.output
             nodes_snapshot = scheduler.snapshot(run_spec.id)
             budget = scheduler.budget_snapshot(run_spec.id)
             event_counts: dict[str, int] = {}
