@@ -179,6 +179,13 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(report["result"]["status"], "succeeded")
 
+    def test_cli_consumes_unicode_separator_inside_sse_text(self) -> None:
+        _FakeHandler.payload = _sse("42\u2028units").replace(b"\\u2028", "\u2028".encode())
+        self._write_plan()
+        code, report = self._run("--endpoint", self.url)
+        self.assertEqual(code, 0)
+        self.assertEqual(report["result"]["status"], "succeeded")
+
     def test_cli_rejects_decreasing_usage(self) -> None:
         stop = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
         update = b'event: message_delta\ndata: {"usage":{"output_tokens":0}}\n\n'

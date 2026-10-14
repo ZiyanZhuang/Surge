@@ -47,6 +47,7 @@
 | D23 | P1 | provenance 名称解析忽略当前节点优先级且错误拆分 `/` | 已修复；验证 24 项、全量 214 项通过 |
 | D24 | P1 | provenance 的 cites 边终点与 produced artifact 顶点完全脱节 | 已修复；验证 25 项、全量 215 项通过 |
 | D25 | P1 | 后续 SSE usage 可回退计数或忽略非法更新，导致漏记已报告用量 | 已修复；usage 5 项与全量 218 项通过 |
+| D26 | P1 | Python splitlines 把合法 Unicode 正文拆成协议行，拒绝有效 SSE | 已修复；HTTP/CLI Unicode 回归及全量 220 项通过 |
 
 文档中部分“未来工作”描述与已有 bridge/模型验证实现不一致，待代码与证据核对。
 
@@ -105,6 +106,8 @@
   - 完整回归：215/215（50.815 秒）；Node 42/42、构建与发布验证通过。
 - D25：逐帧验证非负累计整数，非法起始值不能被末帧覆盖，null/list 与降低计数一律失败；只合并已理解的两个计数，不累计未知字段。最终 output 仍必须由 message_delta 报告，保留 D06 的缺 usage fail-closed 规则。
   - 完整回归：218/218（52.038 秒）；Node 42/42、构建与发布验证通过。
+- D26：CR/LF 标准化后仅按 LF 分行，保留 JSON 字符串内的 NEL/U+2028/U+2029；三个原始 UTF-8 反例及 CLI 回归验证正文不会被误拆或改写。
+  - 完整回归：220/220（53.631 秒）；Node 42/42、构建与发布验证通过。
 
 ## 假设列表
 
@@ -113,12 +116,16 @@
 1. 调度波次、依赖与终态恢复可能存在未覆盖边界。
 2. 并发完成、租约恢复与预算结算可能破坏原子性或审计事件完整性。
 3. 不可信 HTTP/SSE/usage/claim 输入可能未完全 fail-closed。
-4. 待复现：SSE malformed/error 帧可能被忽略，合法 CRLF 与分阶段 usage 可能被拒绝。
-5. 待复现：隔离边界可能接受 NaN/布尔 timeout 配置，或把非法 artifact 强转字符串。
-6. 待复现：模型验证器读取共享 last_response，可能串用并发调用 verdict/usage。
-7. 待复现：Node bridge 在读取请求体前检查容量，或在缺少 finish 时仍发送成功终止。
-8. 已复现待修复：80 次并发 SQLite 新库启动有 15 次 `PRAGMA journal_mode=WAL` 立即报 locked；再次 40 次有 11 次同位置失败。
-9. 待检查：CLI 纯文本非数字答案、畸形计划输入、验证层非法 usage 被相加洗白、provenance 短名称优先级、累计 SSE usage 回退、spawn 启动失败清理。
+4. SSE malformed/error、标准帧、累计 usage 与 Unicode：已证实并修复（D05/D06/D25/D26）。
+5. 隔离非法 grace 与 artifact 强转：已证实并修复（D08/D09）。
+6. 模型验证共享最后响应：已证实并修复（D14）。
+7. bridge 并发准入与不完整上游流：已证实并修复（D12/D13）。
+8. 并发 WAL 初始化：已证实并修复（D17）。
+9. CLI 纯文本、畸形计划、usage 洗白与 provenance 名称：已证实并修复（D18/D19/D22/D23）。
+10. 下一焦点（已复现）：own artifact 名称伪装为 SHA 引用，可让实际内容 42 的引用被验证为支持 99；检查 canonical 引用优先级、相同正文的独立来源与限定名歧义。
+11. 待复现：spawn 启动失败资源清理、非法 artifact/序列化异常时已知成本丢失、HTTP 最小 1 秒心跳超出短 node timeout、CLI 非有限参数、病态 verifier JSON 输出。
+
+当前阶段为逐问题调试，三轮独立审查尚未开始。第一个两小时评估时刻为 2026-10-15 02:52:57；总时间上限约为 07:52:57（Asia/Shanghai）。
 
 ## 模块覆盖
 
@@ -146,5 +153,5 @@
 
 ## 提交与交付
 
-- 修复提交：`2d2b48a`（D01）、`eef9ad7`（D03）、`a17bd2b`（D02）、`5c44380`（D04）、`f061b99`（D05）。
+- 修复提交历史：`git log 6be4db1..HEAD`；每个修复独立 fix 提交并带 `Signed-off-by: Codex`。
 - 最终测试、发布卫生检查、推送与耗时：待记录。

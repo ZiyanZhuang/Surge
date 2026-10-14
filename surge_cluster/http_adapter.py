@@ -113,7 +113,7 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
         event_name = None
         data = None
         data_lines: list[str] = []
-        for line in frame.splitlines():
+        for line in frame.split("\n"):
             if line.startswith("event:"):
                 event_name = line[6:].strip()
             elif line.startswith("data:"):

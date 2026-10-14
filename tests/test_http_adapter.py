@@ -131,6 +131,15 @@ class HttpAdapterTests(unittest.TestCase):
         result = HttpWorkerAdapter(self.url, "model").run(NodeSpec("n", "work"), {})
         self.assertEqual(result.envelope["answer"], "Evidence collected successfully.")
 
+    def test_unicode_separators_inside_json_text_do_not_split_sse_lines(self) -> None:
+        for separator in ("\u0085", "\u2028", "\u2029"):
+            with self.subTest(separator=repr(separator)):
+                answer = "42" + separator + "units"
+                escaped = json.dumps(separator)[1:-1].encode()
+                _FakeHandler.payload = _sse(answer=answer).replace(escaped, separator.encode())
+                result = HttpWorkerAdapter(self.url, "model").run(NodeSpec("n", "work"), {})
+                self.assertEqual(result.envelope["answer"], answer)
+
     def test_successful_call_produces_valid_envelope_and_artifact(self) -> None:
         result, _ = self._run(self._adapter())
         self.assertEqual(result.status, "succeeded")
