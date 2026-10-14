@@ -35,11 +35,12 @@ import json
 import math
 import re
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Iterable, Mapping
 
 from .core import AdapterFailure, NodeSpec, WorkerResult
 
-_DIGITS = re.compile(r"\d+(?:\.\d+)?")
+_DIGITS = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
 _FENCE = re.compile(r"^```[a-zA-Z0-9_-]*\s*|\s*```$")
 
 
@@ -76,13 +77,9 @@ def resolve_evidence(
     return resolved
 
 
-def _numbers(text: str) -> set[str]:
-    """取出用于比对的数字字面量；去掉末尾零以便 93.5 与 93.50 视为同一数值。"""
-    values = set()
-    for raw in _DIGITS.findall(text):
-        trimmed = raw.rstrip("0").rstrip(".") if "." in raw else raw
-        values.add(trimmed or "0")
-    return values
+def _numbers(text: str) -> set[Decimal]:
+    """保留符号并精确比较十进制与科学计数法，不引入浮点舍入。"""
+    return {Decimal(raw) for raw in _DIGITS.findall(text)}
 
 
 @dataclass(frozen=True)
@@ -251,17 +248,21 @@ class EvidenceVerifier:
             and readable_text
         ):
             checks += 1
-            wanted = _numbers(answer)
-            seen: set[str] = set()
-            for text in readable_text:
-                seen |= _numbers(text)
-            if wanted and not (wanted & seen):
-                issues.append(
-                    VerificationIssue(
-                        "answer_absent",
-                        "envelope answer does not appear in any readable evidence",
+            try:
+                wanted = _numbers(answer)
+                seen: set[Decimal] = set()
+                for text in readable_text:
+                    seen |= _numbers(text)
+            except InvalidOperation:
+                issues.append(VerificationIssue("invalid_numeric_value", "answer or evidence contains an unsupported numeric value"))
+            else:
+                if wanted and not wanted.issubset(seen):
+                    issues.append(
+                        VerificationIssue(
+                            "answer_absent",
+                            "envelope answer does not appear in any readable evidence",
+                        )
                     )
-                )
 
         errors = [issue for issue in issues if issue.severity == "error"]
         score = 1.0 if checks == 0 else max(0.0, 1.0 - len(errors) / max(1, checks))

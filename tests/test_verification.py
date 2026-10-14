@@ -136,6 +136,22 @@ class EvidenceVerifierTests(unittest.TestCase):
         report = EvidenceVerifier().verify(_node(), _envelope("42", []))
         self.assertEqual([issue.code for issue in report.issues], [])
 
+    def test_answer_check_requires_all_signed_numeric_values(self) -> None:
+        for answer, evidence, expected in (
+            ("42 and 99", "the value is 42", False),
+            ("-42", "the value is 42", False),
+            ("1e3", "the value is 1000", True),
+            ("93.50", "the value is 93.5", True),
+            ("1e999999999999999999999999", "the value is 42", False),
+        ):
+            with self.subTest(answer=answer):
+                report = EvidenceVerifier(require_answer_in_evidence=True).verify(
+                    _node(), _envelope(answer, [{"id": "c", "text": "value", "evidence_refs": ["source"]}]),
+                    dependency_refs={"source": "artifact:" + "a" * 64},
+                    read_artifact=lambda _ref: evidence,
+                )
+                self.assertEqual(report.passed, expected)
+
     def test_malformed_claim_is_reported(self) -> None:
         envelope = _envelope("42", ["not-an-object"])  # type: ignore[list-item]
         report = EvidenceVerifier().verify(_node(), envelope)

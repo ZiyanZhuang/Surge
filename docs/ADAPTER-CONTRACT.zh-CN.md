@@ -117,6 +117,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 * `IsolatedAdapter`：子进程执行，`max_processes` 限制同时存活的子进程数，硬超时 = `node.timeout_seconds + hard_timeout_grace`，超时或取消时 terminate→join→kill。跨进程只转发可序列化上下文（run/attempt/wave/stage/progress/route/artifacts），`read_artifact`、`heartbeat` 等回调由父进程代理：子进程通过单向控制队列上报 heartbeat/progress，授权仍由调度器 CAS 决定，因此迟到的子进程结果不会被提交。内层 adapter 的 `calls` 明细会随结果带回父进程。
 * `VerifyingAdapter`：`policy="annotate"` 只把 `verification` 与 `warnings` 附加到 envelope；`policy="fail"` 在验证失败时抛出 `AdapterFailure(kind="verification")`，让节点失败并阻断下游。两种策略都不修改原 envelope 字段与 artifact 正文。
 
+`EvidenceVerifier(require_answer_in_evidence=True)` 要求答案中全部数值出现在可读的已引用证据中；比较保留正负号，并把等值十进制/科学计数法视为相同值。这只是数值存在性检查，不推断单位、因果或科学正确性。
+
 ## 只读审计面
 
 调度器提供五个只读方法，供验证器、Gate 脚本和外部审计使用；它们不改变任何状态，也不参与调度决策：
