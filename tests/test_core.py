@@ -745,6 +745,38 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(result.succeeded, ("n0", "n1"))
             self.assertEqual(adapter.max_active, 1)
 
+    def test_artifact_names_cannot_impersonate_digest_references(self):
+        fake_ref = "artifact:" + "0" * 64
+
+        class DigestNamedAdapter(CountingAdapter):
+            def run(self, node, context):
+                base = super().run(node, context)
+                envelope = dict(base.envelope)
+                envelope["claims"] = [{"id": "c", "text": "value", "evidence_refs": [fake_ref]}]
+                return WorkerResult(envelope, {fake_ref: "99"})
+
+        with self.scheduler(self._run_dir()) as scheduler:
+            scheduler.submit(RunSpec("fake-digest"), [NodeSpec("n", "work", max_attempts=1)])
+            self.assertEqual(scheduler.execute(DigestNamedAdapter()).status, "failed")
+            self.assertEqual(scheduler.artifacts("fake-digest"), [])
+
+    def test_ambiguous_qualified_dependency_alias_is_rejected(self):
+        class AmbiguousAdapter(CountingAdapter):
+            def run(self, node, context):
+                base = super().run(node, context)
+                if node.id == "a/b":
+                    return WorkerResult(base.envelope, {"c": "left source"})
+                if node.id == "a":
+                    return WorkerResult(base.envelope, {"b/c": "right source"})
+                envelope = dict(base.envelope)
+                envelope["claims"] = [{"id": "c", "text": "value", "evidence_refs": ["a/b/c"]}]
+                return WorkerResult(envelope)
+
+        with self.scheduler(self._run_dir()) as scheduler:
+            scheduler.submit(RunSpec("ambiguous-alias"), [NodeSpec("a/b", "work"), NodeSpec("a", "work"), NodeSpec("sink", "work", depends_on=("a/b", "a"), wave=1, max_attempts=1)])
+            result = scheduler.execute(AmbiguousAdapter())
+            self.assertEqual(result.failed, ("sink",))
+
     def test_execute_setup_failure_releases_owner_claim(self):
         directory = self._run_dir()
         artifact_parent = directory / "run-artifacts"

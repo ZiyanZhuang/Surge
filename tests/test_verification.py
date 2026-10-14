@@ -11,6 +11,7 @@ from typing import Any, Mapping
 
 from surge_cluster import (
     AdapterFailure,
+    ArtifactStore,
     DAGScheduler,
     EvidenceVerifier,
     LocalEchoAdapter,
@@ -85,6 +86,31 @@ class _SourceAdapter:
 
 
 class EvidenceVerifierTests(unittest.TestCase):
+    def test_digest_references_cannot_be_shadowed_by_own_artifact_names(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = ArtifactStore(directory)
+            source, _ = store.put_text("42")
+            support, _ = store.put_text("independent method description")
+            envelope = _envelope("99", [{"id": "c", "text": "value", "evidence_refs": [source, "support"]}])
+            report = EvidenceVerifier(require_content=True, require_answer_in_evidence=True).verify(
+                _node(), envelope, own_artifacts={source: "99"},
+                dependency_refs={"source": source, "support": support}, read_artifact=store.read_text,
+            )
+            self.assertFalse(report.passed)
+            self.assertIn("answer_absent", [issue.code for issue in report.issues])
+
+    def test_digest_reference_can_use_independent_identical_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = ArtifactStore(directory)
+            source, _ = store.put_text("42")
+            for ref, passed in ((source, True), ("copy", False)):
+                with self.subTest(ref=ref):
+                    report = EvidenceVerifier(require_content=True).verify(
+                        _node(), _envelope("42", [{"id": "c", "text": "value", "evidence_refs": [ref]}]),
+                        own_artifacts={"copy": "42"}, dependency_refs={"source": source}, read_artifact=store.read_text,
+                    )
+                    self.assertEqual(report.passed, passed)
+
     def test_missing_evidence_is_reported(self) -> None:
         report = EvidenceVerifier().verify(_node(), _envelope("42", [{"id": "c1", "text": "x", "evidence_refs": []}]))
         self.assertFalse(report.passed)

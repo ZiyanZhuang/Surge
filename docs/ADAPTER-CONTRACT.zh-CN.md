@@ -138,6 +138,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 provenance 名称解析与调度器保持当前节点名称优先；依赖限定名称按完整 `node_id/name` 匹配，不以第一个 `/` 拆分，因此 node ID 或 artifact 名称含 `/` 时仍可重建引用。歧义引用仍报告问题。
 
+`artifact:<64 位小写十六进制 SHA-256>` 是保留的内容引用，不作为名称别名解析；同形 artifact 名称不能冒充另一份正文。限定名产生歧义时只保留明确名称与 digest，不静默选最后一个绑定。按 digest 引用的正文若也存在于独立依赖中，验证器使用该依赖来源；当前节点普通名称仍保留 own 优先级。
+
 已解析引用的 `cites.to` 与 `produced.to` 使用同一个 artifact 顶点标识；`cites.ref` 保留原始 evidence_ref 名称或 digest。未解析引用保留占位边与 finding，不会被伪装成已连通的证据。
 
 ## 只读审计面

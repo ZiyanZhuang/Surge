@@ -224,6 +224,10 @@ class WorkerAdapter(Protocol):
         """Execute one node. Implement this in a DSH Host adapter."""
 
 
+def _is_artifact_ref(value: Any) -> bool:
+    return isinstance(value, str) and value.startswith("artifact:") and len(value) == 73 and all(char in "0123456789abcdef" for char in value[9:])
+
+
 class ArtifactStore:
     """带完整性校验和原子发布的内容寻址文本 artifact 存储。"""
 
@@ -1136,19 +1140,24 @@ class DAGScheduler:
     def _artifact_refs(self, run_id: str, node: sqlite3.Row, rows: dict[str, sqlite3.Row]) -> dict[str, str]:
         refs: dict[str, str] = {}
         ambiguous_names: set[str] = set()
+
+        def add_alias(name: str, ref: str) -> None:
+            if _is_artifact_ref(name) or name in ambiguous_names:
+                return
+            previous = refs.get(name)
+            if previous is None:
+                refs[name] = ref
+            elif previous != ref:
+                refs.pop(name, None)
+                ambiguous_names.add(name)
+
         for dependency in json.loads(node["depends_on"]):
             for artifact in self._conn.execute("SELECT * FROM artifacts WHERE run_id=? AND node_id=?", (run_id, dependency)):
                 name, ref = artifact["name"], artifact["ref"]
                 # 同名 artifact 不再静默覆盖：保留 dependency/name 命名空间，
                 # 只有唯一来源才提供短名称兼容旧 adapter。
-                refs[f"{dependency}/{name}"] = ref
-                if name not in ambiguous_names:
-                    previous = refs.get(name)
-                    if previous is None:
-                        refs[name] = ref
-                    elif previous != ref:
-                        refs.pop(name, None)
-                        ambiguous_names.add(name)
+                add_alias(f"{dependency}/{name}", ref)
+                add_alias(name, ref)
                 refs[ref] = ref
         return refs
 
@@ -1387,7 +1396,8 @@ class DAGScheduler:
                 """,
                 (run_id, node_id, name, ref, str(store.root / digest), digest),
             )
-            refs[name] = ref
+            if not _is_artifact_ref(name):
+                refs[name] = ref
             refs[ref] = ref
         return refs
 

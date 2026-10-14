@@ -38,7 +38,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Iterable, Mapping
 
-from .core import AdapterFailure, NodeSpec, WorkerResult
+from .core import AdapterFailure, NodeSpec, WorkerResult, _is_artifact_ref
 from .http_adapter import ARTIFACT_NAME
 
 _DIGITS = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
@@ -62,10 +62,11 @@ def resolve_evidence(
     """
     resolved: dict[str, tuple[str | None, str]] = {}
     for name, content in dict(own_artifacts or {}).items():
-        resolved[str(name)] = (content, "own")
+        if not _is_artifact_ref(name):
+            resolved[str(name)] = (content, "own")
         resolved[f"artifact:{content_digest(content)}"] = (content, "own")
     for key, ref in dict(dependency_refs or {}).items():
-        if not isinstance(ref, str) or key in resolved:
+        if not isinstance(ref, str) or _is_artifact_ref(key) and key != ref:
             continue
         content: str | None = None
         if callable(read_artifact):
@@ -73,8 +74,8 @@ def resolve_evidence(
                 content = read_artifact(ref)
             except Exception:
                 content = None
-        resolved[key] = (content, "dependency")
-        resolved.setdefault(ref, (content, "dependency"))
+        resolved.setdefault(key, (content, "dependency"))
+        resolved[ref] = (content, "dependency")
     return resolved
 
 
@@ -776,7 +777,7 @@ def build_provenance(
                     continue
                 for ref in evidence:
                     key = str(ref)
-                    if key.startswith("artifact:"):
+                    if _is_artifact_ref(key):
                         target = key if key in content_by_ref else None
                     else:
                         target = _lookup_named(artifact_by_name, node_id, key)
