@@ -236,6 +236,19 @@ async function main() {
       if (options.model === 'no-usage-model') {
         return textStream({ usage: null })();
       }
+      if (options.model === 'invalid-usage-model') {
+        return textStream({ usage: { inputTokens: null, outputTokens: '7' } })();
+      }
+      if (['missing-finish-model', 'unknown-finish-model', 'duplicate-finish-model', 'late-text-model'].includes(options.model)) {
+        return (async function* () {
+          yield { type: 'text-delta', text: 'partial' };
+          yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 1 } };
+          if (options.model === 'missing-finish-model') return;
+          yield { type: 'finish', reason: { kind: options.model === 'unknown-finish-model' ? 'unknown' : 'stop' } };
+          if (options.model === 'duplicate-finish-model') yield { type: 'finish', reason: { kind: 'stop' } };
+          if (options.model === 'late-text-model') yield { type: 'text-delta', text: 'late' };
+        })();
+      }
       if (options.model === 'max-tokens-model') {
         return textStream({ finish: { kind: 'max-tokens' } })();
       }
@@ -278,6 +291,13 @@ async function main() {
   const noUsageDelta = dataFrames(noUsage).find((item) => item.type === 'message_delta');
   check('missing upstream usage is not fabricated', noUsageDelta.usage === undefined, JSON.stringify(noUsageDelta));
   check('missing usage still ends with message_stop', eventNames(noUsage).includes('message_stop'));
+  check('message_start never fabricates usage', dataFrames(noUsage).find((item) => item.type === 'message_start').message.usage === undefined);
+  const invalidUsage = await (await post(mappingUrl, token, { ...REQUEST, model: 'invalid-usage-model' })).text();
+  check('invalid upstream usage is not coerced into valid counts', dataFrames(invalidUsage).find((item) => item.type === 'message_delta').usage === undefined);
+  for (const model of ['missing-finish-model', 'unknown-finish-model', 'duplicate-finish-model', 'late-text-model']) {
+    const invalid = await (await post(mappingUrl, token, { ...REQUEST, model })).text();
+    check(`${model} fails closed`, eventNames(invalid).includes('error') && !eventNames(invalid).includes('message_stop'));
+  }
 
   // ---- cancellation -----------------------------------------------------
   console.log('cancellation');

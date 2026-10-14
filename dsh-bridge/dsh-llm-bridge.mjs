@@ -122,7 +122,6 @@ export async function* streamToAnthropicSse(chunks, { model }) {
       role: 'assistant',
       model,
       content: [],
-      usage: { input_tokens: 0, output_tokens: 0 },
     },
   });
   let index = 0;
@@ -130,6 +129,7 @@ export async function* streamToAnthropicSse(chunks, { model }) {
   let openType = null;
   let usage = null;
   let finish = null;
+  let finished = false;
   const closeOpen = function* () {
     if (open !== null) {
       yield frame('content_block_stop', { type: 'content_block_stop', index: open });
@@ -139,6 +139,7 @@ export async function* streamToAnthropicSse(chunks, { model }) {
   };
   for await (const chunk of chunks) {
     if (!chunk || typeof chunk !== 'object') continue;
+    if (finished) throw new Error('upstream emitted a chunk after finish');
     if (chunk.type === 'block-start') continue; // 块在首个 delta 时才真正打开，保持索引连续
     if (chunk.type === 'text-delta' || chunk.type === 'reasoning-delta') {
       const text = typeof chunk.text === 'string' ? chunk.text : '';
@@ -183,19 +184,24 @@ export async function* streamToAnthropicSse(chunks, { model }) {
       continue;
     }
     if (chunk.type === 'usage') {
-      const input = chunk.usage && Number(chunk.usage.inputTokens);
-      const output = chunk.usage && Number(chunk.usage.outputTokens);
-      if (Number.isFinite(input) && Number.isFinite(output)) {
-        usage = { input_tokens: input, output_tokens: output };
-      }
+      const input = chunk.usage?.inputTokens;
+      const output = chunk.usage?.outputTokens;
+      usage = Number.isSafeInteger(input) && input >= 0 && Number.isSafeInteger(output) && output >= 0
+        ? { input_tokens: input, output_tokens: output }
+        : null;
       continue;
     }
     if (chunk.type === 'finish') {
+      finished = true;
       finish = chunk.reason ?? null;
     }
   }
   // I4：错误/中止不发 message_stop，客户端会把"响应不完整"当成失败。
   const kind = finish && typeof finish === 'object' ? finish.kind : undefined;
+  if (!finished || !['stop', 'max-tokens', 'tool-calls', 'error', 'aborted'].includes(kind)) {
+    yield frame('error', { type: 'error', error: { type: 'incomplete_stream', message: 'upstream stream ended without a valid finish' } });
+    return;
+  }
   if (kind === 'error' || kind === 'aborted') {
     yield frame('error', { type: 'error', error: { type: kind, message: upstreamFailureText(finish) } });
     return;

@@ -36,8 +36,8 @@ fail-closed 规则。换一种自定义线协议会把那套校验逻辑复制�
 |---|---|
 | I1 | 只监听 `127.0.0.1`，并拒绝非回环来源 |
 | I2 | 每次请求必须带 `x-api-key` 或 `Authorization: Bearer`，且等于 token 文件内容 |
-| I3 | 上游没有报告 usage 时不伪造 `usage`：`message_delta` 省略该字段，客户端据此 fail-closed |
-| I4 | 上游以 `error`/`aborted` 结束时发出 SSE `error` 事件且**不发** `message_stop` |
+| I3 | 上游 usage 缺失或不是非负安全整数时不伪造计数；起始帧不填写占位 usage |
+| I4 | 上游 `error`/`aborted`、缺失/重复/未知 finish 或 finish 后追加 chunk 均不发 `message_stop`，而以 SSE `error` 失败 |
 | I5 | 并发超过上限返回 HTTP 429，不排队、不静默丢弃 |
 | I6 | 日志不写 prompt、不写 token |
 
