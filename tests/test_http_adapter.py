@@ -193,6 +193,14 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(caught.exception.kind, "cancelled")
         self.assertEqual(_FakeHandler.request_count, 0)
 
+    def test_heartbeat_does_not_raise_a_subsecond_node_lease(self) -> None:
+        leases = []
+        self._adapter(timeout=2.0).run(
+            NodeSpec("n", "work", timeout_seconds=0.05),
+            {"heartbeat": lambda lease: leases.append(lease) or True},
+        )
+        self.assertEqual(leases, [0.05])
+
     def test_oversized_response_is_summarized_not_truncated(self) -> None:
         long_answer = "42 " + "x" * 5000
         _FakeHandler.payload = _sse(answer=long_answer)

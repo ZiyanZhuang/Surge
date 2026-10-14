@@ -352,7 +352,7 @@ class HttpWorkerAdapter:
         heartbeat = context.get("heartbeat") if isinstance(context, Mapping) else None
         if callable(heartbeat):
             # 租约至少覆盖本次请求的墙钟时间，避免请求进行中被判为过期。
-            lease = max(1.0, min(float(node.timeout_seconds), self.timeout))
+            lease = min(float(node.timeout_seconds), self.timeout)
             if heartbeat(lease) is False:
                 raise AdapterFailure(
                     "lease heartbeat rejected; attempt is no longer current",
