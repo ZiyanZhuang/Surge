@@ -133,7 +133,7 @@ with DAGScheduler("demo.sqlite3", max_workers=4) as scheduler:
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
-退出码：`0` 全部成功，`1` 有节点失败或下游 blocked，`2` 计划或参数不合法。报告包含 UTC 时间戳、Python/平台快照、计划 SHA-256、逐节点状态、预算结算，以及真实模式下每次调用的元数据（不含 prompt 正文）。计划的 `schema_version`、未知字段、重复 id 和悬空依赖都会被拒绝，拼写错误不会被静默忽略。
+退出码：`0` 全部成功，`1` 有节点失败或下游 blocked，`2` 计划或参数不合法、运行状态初始化失败或报告写入失败。报告包含 UTC 时间戳、Python/平台快照、计划 SHA-256、逐节点状态、预算结算，以及真实模式下每次调用的元数据（不含 prompt 正文）。计划的 `schema_version`、未知字段、重复 id 和悬空依赖都会被拒绝，拼写错误不会被静默忽略。
 
 `node.max_tokens` 是单次调用的**预算预留上限（输入+输出）**，真实请求的输出上限是 `min(--max-output-tokens, node.max_tokens)`；provider 报告的 `output_tokens` 超过请求上限时 fail-closed。
 

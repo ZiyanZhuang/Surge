@@ -71,7 +71,7 @@ Then, only after you have authorized a real call:
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
-Exit codes: `0` all nodes succeeded, `1` a node failed or a downstream node was blocked, `2` an invalid plan or argument. The report carries a UTC timestamp, an environment snapshot, the plan SHA-256, per-node status, a budget snapshot, event counts, per-call metadata, and a provenance section; prompt text is never included.
+Exit codes: `0` all nodes succeeded, `1` a node failed or a downstream node was blocked, `2` an invalid plan or argument, state initialization failure, or report write failure. The report carries a UTC timestamp, an environment snapshot, the plan SHA-256, per-node status, a budget snapshot, event counts, per-call metadata, and a provenance section; prompt text is never included.
 
 Optional switches: `--api-key` passes an endpoint/bridge key (non-placeholder values are redacted from report metadata); `--isolate` runs every model call in its own worker process (hard timeout via terminate/kill, strict physical concurrency); `--verify annotate|fail|off` adds independent evidence verification, where `fail` makes a failed verification fail the node and block downstream; `--no-provenance` omits the provenance section.
 

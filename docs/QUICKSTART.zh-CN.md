@@ -73,7 +73,7 @@ Remove-Item -Recurse -Force .\quickstart-artifacts -ErrorAction SilentlyContinue
   --endpoint http://127.0.0.1:17800/v1/messages --model gpt-6.1-sol
 ```
 
-退出码 `0` 表示全部成功，`1` 表示有节点失败或下游 blocked，`2` 表示计划或参数不合法。报告含 UTC 时间戳、环境快照、计划 SHA-256、逐节点状态、预算快照、事件计数、逐次调用元数据和 provenance，不包含 prompt 正文。
+退出码 `0` 表示全部成功，`1` 表示有节点失败或下游 blocked，`2` 表示计划或参数不合法、运行状态初始化失败或报告写入失败。报告含 UTC 时间戳、环境快照、计划 SHA-256、逐节点状态、预算快照、事件计数、逐次调用元数据和 provenance，不包含 prompt 正文。
 
 可选开关：
 

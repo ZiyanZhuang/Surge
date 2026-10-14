@@ -8,6 +8,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import sqlite3
 import sys
 import tempfile
 import threading
@@ -228,6 +229,48 @@ class RunDagCliTests(unittest.TestCase):
                 self.assertIn("api_key", report["error"])
                 self.assertNotIn(marker, json.dumps(report))
         self.assertIsNone(_FakeHandler.received)
+
+    def test_state_initialization_errors_return_json_without_dispatch(self) -> None:
+        self._write_plan()
+        for kind in ("file", "corrupt", "future"):
+            with self.subTest(kind=kind):
+                workdir = self.directory / kind
+                if kind == "file":
+                    workdir.write_text("preserve this file", encoding="utf-8")
+                else:
+                    workdir.mkdir()
+                    db = workdir / "run.sqlite3"
+                    if kind == "corrupt":
+                        db.write_bytes(b"not a SQLite database")
+                    else:
+                        with contextlib.closing(sqlite3.connect(db)) as connection, connection:
+                            connection.execute("PRAGMA user_version=99")
+                            connection.execute("CREATE TABLE future_state(value TEXT)")
+                stdout = io.StringIO()
+                args = ["dsh-surge-run", "--plan", str(self.plan), "--output", str(self.output), "--workdir", str(workdir), "--endpoint", self.url]
+                with mock.patch.object(sys, "argv", args), contextlib.redirect_stdout(stdout):
+                    code = run_dag.main()
+                self.assertEqual(code, 2)
+                report = json.loads(stdout.getvalue())
+                self.assertEqual(report["error_kind"], "state")
+                self.assertEqual(json.loads(self.output.read_text(encoding="utf-8")), report)
+                if kind == "file":
+                    self.assertEqual(workdir.read_text(encoding="utf-8"), "preserve this file")
+                elif kind == "corrupt":
+                    self.assertEqual(db.read_bytes(), b"not a SQLite database")
+                else:
+                    with contextlib.closing(sqlite3.connect(db)) as connection:
+                        self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 99)
+                        self.assertEqual(connection.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall(), [("future_state",)])
+        self.assertIsNone(_FakeHandler.received)
+
+    def test_temporary_state_creation_failure_does_not_attempt_none_cleanup(self) -> None:
+        self._write_plan()
+        with mock.patch.object(run_dag.tempfile, "mkdtemp", side_effect=OSError("temporary storage unavailable")), mock.patch.object(run_dag.shutil, "rmtree") as cleanup:
+            code, report = self._run("--dry-run")
+        self.assertEqual(code, 2)
+        self.assertEqual(report["error_kind"], "state")
+        cleanup.assert_not_called()
 
     def test_dry_run_executes_plan_offline(self) -> None:
         self._write_plan()

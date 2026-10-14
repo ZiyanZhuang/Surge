@@ -123,6 +123,8 @@ adapter = HttpWorkerAdapter(
 
 CLI 覆盖参数的错误属于 usage（退出码 2）：`--timeout` 必须有限且大于零，`--cost-per-1k-tokens` 必须有限且非负；dry-run 与真实模式执行相同检查。
 
+工作目录无法创建、SQLite 损坏或 schema 版本不兼容等状态初始化失败，返回退出码 2 和 `error_kind="state"` 的 JSON 报告，不派发 worker，保留调用者指定的状态文件。临时目录创建失败不尝试清理未创建的路径。
+
 报告路径不能等于输入计划或其文件别名，也不能覆盖持久化 workdir 的 run.sqlite3、SQLite 日志或 run-artifacts 子树；冲突在执行前返回 usage/2，只向 stdout 写错误，不覆盖受保护文件。workdir/report.json 这类相邻报告仍受支持。
 
 报告在同目录临时文件中写入、flush/fsync 后原子替换；写入失败保留旧报告并清理临时文件，替换文件名不会改写其他硬链接的正文。输出失败返回 2，并在 stdout 的原运行报告上附 output 错误，保留本次结果、预算与调用证据。

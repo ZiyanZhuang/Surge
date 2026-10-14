@@ -21,6 +21,7 @@ import math
 import os
 import platform
 import shutil
+import sqlite3
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -208,10 +209,15 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path | None
         return 2, _error_report("usage", str(exc)), args.output
 
     temporary = args.workdir is None
-    workdir = Path(tempfile.mkdtemp(prefix="dsh-surge-run-")) if temporary else Path(args.workdir)
-    workdir.mkdir(parents=True, exist_ok=True)
+    workdir = None
     try:
-        with DAGScheduler(workdir / "run.sqlite3", max_workers=run_spec.max_workers) as scheduler:
+        try:
+            workdir = Path(tempfile.mkdtemp(prefix="dsh-surge-run-")) if temporary else Path(args.workdir)
+            workdir.mkdir(parents=True, exist_ok=True)
+            scheduler = DAGScheduler(workdir / "run.sqlite3", max_workers=run_spec.max_workers)
+        except (OSError, sqlite3.Error, ValueError) as exc:
+            return 2, _error_report("state", f"cannot initialize runtime state: {exc}"), args.output
+        with scheduler:
             try:
                 scheduler.submit(run_spec, nodes)
             except ValueError as exc:
@@ -226,7 +232,7 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path | None
                 build_provenance(scheduler, run_spec.id).as_dict() if args.provenance else None
             )
     finally:
-        if temporary:
+        if temporary and workdir is not None:
             shutil.rmtree(workdir, ignore_errors=True)
 
     report: dict[str, Any] = {
