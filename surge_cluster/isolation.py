@@ -254,15 +254,17 @@ class IsolatedAdapter:
     ) -> dict[str, Any]:
         deadline = time.monotonic() + hard_timeout
         while True:
-            if parent_conn.poll(_POLL_INTERVAL):
-                try:
+            try:
+                ready = parent_conn.poll(_POLL_INTERVAL)
+                if ready:
                     payload = parent_conn.recv()
-                except EOFError as exc:
-                    raise AdapterFailure(
-                        "isolated worker exited without sending a result",
-                        kind="crash",
-                        retryable=False,
-                    ) from exc
+            except (EOFError, OSError) as exc:
+                raise AdapterFailure(
+                    "isolated worker exited without sending a result",
+                    kind="crash",
+                    retryable=False,
+                ) from exc
+            if ready:
                 if not isinstance(payload, dict):
                     raise AdapterFailure("isolated worker returned a malformed payload", kind="crash")
                 return payload

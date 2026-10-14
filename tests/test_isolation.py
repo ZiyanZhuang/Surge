@@ -61,6 +61,11 @@ class _NonSerializableAdapter:
         return WorkerResult(envelope={"answer": "x", "bad": float("nan")})
 
 
+class _CrashAdapter:
+    def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
+        os._exit(2)
+
+
 class _PaidFailureAdapter:
     def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
         result = WorkerResult({"answer": "failed", "usage": {"total_tokens": 15, "cost": 0.25}})
@@ -124,6 +129,21 @@ def _node(**overrides: Any) -> NodeSpec:
 
 
 class IsolationTests(unittest.TestCase):
+    def test_abrupt_child_exit_is_a_structured_crash(self) -> None:
+        isolated = IsolatedAdapter(_CrashAdapter())
+        with self.assertRaises(AdapterFailure) as caught:
+            isolated.run(_node(), {})
+        self.assertEqual(caught.exception.kind, "crash")
+        self.assertEqual(isolated.stats()["started"], 1)
+
+    def test_broken_result_pipe_is_a_structured_crash(self) -> None:
+        isolated = IsolatedAdapter(_CrashAdapter())
+        conn = mock.Mock()
+        conn.poll.side_effect = BrokenPipeError("worker pipe closed")
+        with self.assertRaises(AdapterFailure) as caught:
+            isolated._await_result(conn, mock.Mock(), mock.Mock(), None, 1)
+        self.assertEqual(caught.exception.kind, "crash")
+
     def test_spawn_failure_closes_resources_and_does_not_count_a_start(self) -> None:
         isolated = IsolatedAdapter(LocalEchoAdapter())
         parent, child = isolated._ctx.Pipe(duplex=False)
