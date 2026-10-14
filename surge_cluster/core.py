@@ -252,7 +252,7 @@ class ArtifactStore:
             if hashlib.sha256(existing).hexdigest() != digest:
                 raise IOError(f"artifact integrity mismatch: {digest}")
             return f"artifact:{digest}", digest
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{digest}.", dir=self.root)
+        fd, tmp_name = tempfile.mkstemp(prefix=".artifact-", dir=self.root)
         try:
             with os.fdopen(fd, "wb") as handle:
                 handle.write(data)

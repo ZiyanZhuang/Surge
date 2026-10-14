@@ -749,6 +749,13 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(IOError):
             store.read_text(ref)
 
+    def test_artifact_write_near_windows_path_limit(self):
+        directory = self._run_dir().resolve()
+        root = directory / ("p" * max(1, 190 - len(str(directory)) - 1))
+        store = ArtifactStore(root)
+        ref, _ = store.put_text("long-path evidence")
+        self.assertEqual(store.read_text(ref), "long-path evidence")
+
     def test_artifact_bindings_allow_same_digest_per_node_and_run(self):
         directory = self._run_dir()
 

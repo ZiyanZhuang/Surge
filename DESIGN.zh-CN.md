@@ -66,6 +66,8 @@ Preset 只负责模式组合、提示词和调用约束；`dsh-surge-run` 负责
 
 每个 claim 必须引用已存在的 artifact。strict envelope 要求 answer、claims、citations、confidence、warnings、usage 及 usage.cost，且 claims/citations/warnings 的元素类型正确；允许额外 JSON 字段以便扩展。默认 2 MB 限制分别作用于单个 envelope 和单个 artifact；当前没有单个 WorkerResult 的 artifact 数量/总大小配额，生产 adapter 应自行限制总输出。依赖证据使用 `dependency_id/name` 或 digest；短名称仅在无歧义时提供，当前节点与依赖同名时当前节点短名称优先。验证失败会有限重试；耗尽后节点失败，下游 blocked。
 
+Artifact 在同目录用短前缀临时文件写入，再原子替换为 SHA-256 文件名；临时名称不额外放大 Windows 路径长度要求，最终路径仍需满足宿主文件系统限制。
+
 ### 需求感知排布示例
 
 ```python
