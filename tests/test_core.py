@@ -881,6 +881,17 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(result.status, "succeeded")
             self.assertAlmostEqual(result.spent_cost, 0.001)
 
+    def test_terminal_execute_returns_the_same_persisted_events(self):
+        for invalid in (False, True):
+            with self.subTest(invalid=invalid):
+                directory = self._run_dir()
+                with self.scheduler(directory) as scheduler:
+                    scheduler.submit(RunSpec("stable-events"), [NodeSpec("n", "work", max_attempts=1)])
+                    first = scheduler.execute(CountingAdapter(invalid=invalid), "stable-events")
+                    second = scheduler.execute(CountingAdapter(), "stable-events")
+                    self.assertEqual(first.events, second.events)
+                    self.assertEqual(first.events, scheduler.result("stable-events").events)
+
     def test_result_includes_persisted_events(self):
         directory = self._run_dir()
         with self.scheduler(directory) as scheduler:

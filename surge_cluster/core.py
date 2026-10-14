@@ -1715,7 +1715,7 @@ class DAGScheduler:
             for pool in executors:
                 pool.shutdown(wait=False, cancel_futures=True)
             release_claim()
-        return self.result(run_id, events)
+        return self.result(run_id)
 
     def _fail_attempt(self, run_id: str, info: Mapping[str, Any], error: str, events: list[str], completed: WorkerResult | None = None) -> None:
         node: NodeSpec = info["node"]

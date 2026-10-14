@@ -51,6 +51,8 @@ strict 模式下，`answer`、`claims`、`citations`、`confidence`、`warnings`
 
 ## 失败策略
 
+`execute()` 的 `RunResult.events` 统一来自按事件 ID 排序的 SQLite 记录；首次完成与终态重复读取相同，不混入仅存在于当前循环的文本提示。
+
 - Adapter 抛出异常：当前 attempt 失败；在 `max_attempts` 未耗尽时有限重试，否则节点为 `failed`，下游为 `blocked`；
 - 若异常为 `AdapterFailure(result=...)`，其中已完成的结果仍接受相同 envelope/预算校验并结算已报告用量，但绝不会提交为成功；失败 envelope 保留用于审计，artifact 绑定不进入下游。隔离层透传这份失败结果。
 - 已返回结果在 artifact 写入、输出校验或隔离序列化阶段失败时，同样结算可确认的费用。无法序列化的隔离输出只携带明确标记的失败投影与 usage，不能因此变成成功；尚未收到的费用不猜测。
