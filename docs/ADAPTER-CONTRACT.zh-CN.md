@@ -136,6 +136,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 provenance 名称解析与调度器保持当前节点名称优先；依赖限定名称按完整 `node_id/name` 匹配，不以第一个 `/` 拆分，因此 node ID 或 artifact 名称含 `/` 时仍可重建引用。歧义引用仍报告问题。
 
+已解析引用的 `cites.to` 与 `produced.to` 使用同一个 artifact 顶点标识；`cites.ref` 保留原始 evidence_ref 名称或 digest。未解析引用保留占位边与 finding，不会被伪装成已连通的证据。
+
 ## 只读审计面
 
 调度器提供五个只读方法，供验证器、Gate 脚本和外部审计使用；它们不改变任何状态，也不参与调度决策：

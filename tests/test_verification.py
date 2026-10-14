@@ -322,6 +322,15 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual(kinds, {"produced", "cites"})
         self.assertEqual(report["finding_count"], 0)
 
+    def test_provenance_citation_edges_reach_produced_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, _, report = self._run_once(directory)
+        produced = {edge["to"] for edge in report["edges"] if edge["kind"] == "produced"}
+        citations = [edge for edge in report["edges"] if edge["kind"] == "cites"]
+        self.assertTrue(citations)
+        self.assertTrue(all(edge["to"] in produced for edge in citations))
+        self.assertEqual(citations[0]["ref"], "source")
+
     def test_dangling_reference_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             db = Path(directory) / "prov.sqlite3"

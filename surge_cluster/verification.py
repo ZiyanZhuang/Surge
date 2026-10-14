@@ -792,7 +792,7 @@ def build_provenance(
                     else:
                         cited.add(target)
                     report.edges.append(
-                        {"from": f"claim:{node_id}/{claim_id}", "to": f"evidence:{key}", "kind": "cites"}
+                        {"from": f"claim:{node_id}/{claim_id}", "to": f"artifact:{target}" if target is not None else f"evidence:{key}", "kind": "cites", "ref": key}
                     )
         for row in rows:
             if str(row.get("ref")) not in cited:
