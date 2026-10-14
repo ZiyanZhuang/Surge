@@ -92,6 +92,7 @@ adapter = HttpWorkerAdapter(
 - 失败抛出 `AdapterFailure`，带 `kind`（`transport`/`http`/`sse`/`usage`/`output-limit`/`response-size`/`content-type`/`empty-output`/`empty-answer`/`cancelled`）和 `retryable`；调度器当前仍按 `max_attempts` 重试任何异常，尚未按 kind 分流；
 - 调用记录 `adapter.calls` 只保存 node id、状态、usage、事件数、输出 sha256 和耗时，不保存 prompt 正文与凭据；
 - 响应超过 `max_artifact_bytes` 时保存摘要与摘要哈希，不做静默截断，并在 envelope 的 `warnings` 中标注。
+- SSE 必须是合法 UTF-8/JSON 对象帧，text delta 必须是字符串；显式 `error`、重复消息起止与结束后的消息帧均失败，不能靠保留事件名绕过 fail-closed。
 
 执行入口是 `dsh-surge-run`（`run_dag.py`）：读取 JSON 计划，`--dry-run` 离线校验，真实模式必须显式给出 `--endpoint`。`node.max_tokens` 在计划里表示单次调用的预算预留上限（输入+输出），报告会记录这一口径。
 

@@ -197,6 +197,23 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, "failed")
         self.assertEqual(adapter.calls[-1]["kind"], "sse")
 
+    def test_malformed_sse_frames_fail_closed(self) -> None:
+        payloads = {
+            "invalid-json": _sse().replace(b'{"type":"message_start"}', b'not-json'),
+            "invalid-text": _sse().replace(b'"text": "{\\\"answer\\\":\\\"93.5%\\\"}"', b'"text": 42'),
+            "error-event": _sse() + b'event: error\ndata: {"type":"error","error":{"message":"failed"}}\n\n',
+            "late-text": _sse() + b'event: content_block_delta\ndata: {"delta":{"type":"text_delta","text":"late"}}\n\n',
+            "duplicate-stop": _sse() + b'event: message_stop\ndata: {"type":"message_stop"}\n\n',
+            "invalid-utf8": _sse().replace(b'93.5%', b'93.5%\xff'),
+        }
+        for name, payload in payloads.items():
+            with self.subTest(frame=name):
+                _FakeHandler.payload = payload
+                adapter = self._adapter()
+                with self.assertRaises(AdapterFailure) as caught:
+                    adapter.run(NodeSpec("n", "work"), {})
+                self.assertEqual(caught.exception.kind, "sse")
+
     def test_event_order_fails_closed(self) -> None:
         _FakeHandler.payload = _sse(reverse_tail=True)
         adapter = self._adapter()

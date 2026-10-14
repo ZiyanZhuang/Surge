@@ -83,10 +83,13 @@ def default_answer_extractor(text: str) -> str | None:
 def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
     """解析 SSE 负载，返回 (文本, usage, 事件名序列)。
 
-    解析过程只收集 ``text_delta`` 和 ``message_delta.usage``；无法解析的帧被
-    忽略，随后由 :func:`require_usage` 和必需事件检查决定是否 fail-closed。
+    只收集 ``text_delta`` 和 ``message_delta.usage``；损坏帧、显式 error
+    与重复/结束后的消息事件在解析边界 fail-closed。
     """
-    text = payload.decode("utf-8", errors="replace")
+    try:
+        text = payload.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise AdapterFailure("adapter SSE is not valid UTF-8", kind="sse") from exc
     events: list[str] = []
     output: list[str] = []
     usage: dict[str, Any] | None = None
@@ -101,16 +104,31 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
                 if raw:
                     try:
                         data = json.loads(raw)
-                    except json.JSONDecodeError:
-                        data = None
+                    except json.JSONDecodeError as exc:
+                        raise AdapterFailure("adapter SSE contains invalid JSON", kind="sse") from exc
         if event_name:
+            if event_name == "error":
+                raise AdapterFailure("adapter SSE contains an upstream error event", kind="sse")
+            if (
+                event_name in {"message_start", "message_stop"} and event_name in events
+                or "message_stop" in events and event_name != "ping"
+            ):
+                raise AdapterFailure("adapter SSE event order contains duplicate or late message events", kind="sse")
+            if not isinstance(data, dict):
+                raise AdapterFailure("adapter SSE event data must be a JSON object", kind="sse")
+            if "type" in data and data["type"] != event_name:
+                raise AdapterFailure("adapter SSE event and data type disagree", kind="sse")
             events.append(event_name)
         if not isinstance(data, dict):
             continue
         if event_name == "content_block_delta":
-            delta = data.get("delta") or {}
+            delta = data.get("delta")
+            if not isinstance(delta, dict):
+                raise AdapterFailure("adapter SSE delta must be an object", kind="sse")
             if delta.get("type") == "text_delta":
-                output.append(str(delta.get("text", "")))
+                if not isinstance(delta.get("text"), str):
+                    raise AdapterFailure("adapter SSE text delta must be a string", kind="sse")
+                output.append(delta["text"])
         if event_name == "message_delta":
             candidate = data.get("usage")
             if isinstance(candidate, dict):

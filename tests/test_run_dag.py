@@ -153,6 +153,16 @@ class RunDagCliTests(unittest.TestCase):
         self.assertTrue(report["runtime_state"]["persisted"])
         self.assertTrue((workdir / "run.sqlite3").is_file())
 
+    def test_malformed_sse_cannot_succeed_through_the_cli(self) -> None:
+        _FakeHandler.payload = _sse().replace(b'{"type":"message_start"}', b'not-json')
+        mapping = _plan_mapping()
+        mapping["nodes"][0]["max_attempts"] = 1
+        self._write_plan(mapping)
+        code, report = self._run("--endpoint", self.url)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["result"]["failed"], ["scout"])
+        self.assertEqual(report["adapter_calls"][0]["kind"], "sse")
+
     def test_duplicate_node_id_is_rejected(self) -> None:
         mapping = _plan_mapping()
         mapping["nodes"][1]["id"] = "scout"
