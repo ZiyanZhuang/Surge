@@ -126,6 +126,18 @@ class EnvelopePersistenceTests(unittest.TestCase):
         self.assertIn("not valid JSON", records["n1"]["error"])
         self.assertEqual(records["n1"]["attempt_number"], 1)
 
+    def test_deep_stored_json_does_not_interrupt_other_node_audits(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            db, _, _ = self._execute(directory, _StaticAdapter(_envelope("42")), [_node(), _node(id="n2")])
+            with DAGScheduler(db, max_workers=1) as scheduler:
+                scheduler._conn.execute("UPDATE attempts SET envelope=? WHERE node_id='n1'", ("[" * 20000 + "0" + "]" * 20000,))
+                scheduler._conn.commit()
+                records = scheduler.envelopes("env")
+        self.assertIsNone(records["n1"]["envelope"])
+        self.assertIn("not valid JSON", records["n1"]["error"])
+        self.assertEqual(records["n1"]["attempt_number"], 1)
+        self.assertEqual(records["n2"]["envelope"]["answer"], "42")
+
     def test_provenance_rebuilds_claims_from_persisted_envelopes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             db, _, _ = self._execute(

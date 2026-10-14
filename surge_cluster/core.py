@@ -2034,7 +2034,7 @@ class DAGScheduler:
                 }
                 try:
                     payload = json.loads(row["envelope"])
-                except (TypeError, ValueError) as exc:
+                except (TypeError, ValueError, RecursionError) as exc:
                     entry.update(
                         {"envelope": None, "error": f"stored envelope is not valid JSON: {exc}"}
                     )
