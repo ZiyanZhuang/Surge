@@ -1614,6 +1614,7 @@ class DAGScheduler:
                             "node": node,
                             "attempt_id": attempt_id,
                             "estimate": estimate,
+                            "cost_per_1k_tokens": route_rate,
                             "started": dispatch_now,
                             "deadline": lease_until,
                             "stage": stage_name,
@@ -1716,24 +1717,34 @@ class DAGScheduler:
             release_claim()
         return self.result(run_id, events)
 
-    def _fail_attempt(self, run_id: str, info: Mapping[str, Any], error: str, events: list[str]) -> None:
+    def _fail_attempt(self, run_id: str, info: Mapping[str, Any], error: str, events: list[str], completed: WorkerResult | None = None) -> None:
         node: NodeSpec = info["node"]
         attempt_id = info["attempt_id"]
         with self._lock, self._conn:
             run = self._get_run(run_id)
+            actual, envelope_record = 0.0, None
+            if isinstance(completed, WorkerResult):
+                envelope_record = encode_envelope_record(completed.envelope)
+                if isinstance(completed.envelope, Mapping):
+                    try:
+                        cost = self._actual_cost(completed.envelope, run, info.get("cost_per_1k_tokens"))
+                        if math.isfinite(cost) and cost >= 0:
+                            actual = cost
+                    except (TypeError, ValueError, OverflowError):
+                        pass
             # 先 CAS 结束 attempt，再结算 reservation；旧 owner/旧 future 无法重复写入。
             now = time.time()
             claimed = self._conn.execute(
                 """
-                UPDATE attempts SET status='failed',finished_at=?,error=?
+                UPDATE attempts SET status='failed',finished_at=?,error=?,cost=?,envelope=COALESCE(?,envelope)
                 WHERE id=? AND run_id=? AND node_id=? AND status='running'
                   AND EXISTS (SELECT 1 FROM runs WHERE id=? AND owner_id=?)
                 """,
-                (now, error, attempt_id, run_id, node.id, run_id, self._owner_id),
+                (now, error, actual, envelope_record, attempt_id, run_id, node.id, run_id, self._owner_id),
             ).rowcount
             if not claimed:
                 return
-            self._release(run_id, node.id, attempt_id, info["estimate"])
+            self._release(run_id, node.id, attempt_id, info["estimate"], actual)
             row = self._conn.execute("SELECT * FROM nodes WHERE run_id=? AND id=?", (run_id, node.id)).fetchone()
             current = row and row["status"] == "running" and row["current_attempt_id"] == attempt_id
             if not current:
@@ -1758,6 +1769,7 @@ class DAGScheduler:
         """提交 worker 结果；所有写入都先验证 attempt 仍是当前 running。"""
         node: NodeSpec = info["node"]
         attempt_id = info["attempt_id"]
+        result = None
         try:
             failure = None
             try:
@@ -1789,7 +1801,7 @@ class DAGScheduler:
                 ):
                     return
                 if current_run["cancel_requested"] or time.time() >= current_run["deadline_at"]:
-                    self._fail_attempt(run_id, info, "run cancelled or deadline exceeded", events)
+                    self._fail_attempt(run_id, info, "run cancelled or deadline exceeded", events, result)
                     return
 
                 refs = self._store_artifacts(run_id, node.id, result.artifacts, store)
@@ -1807,13 +1819,7 @@ class DAGScheduler:
                     report = validate_envelope(result.envelope, set(refs.values()) | set(refs.keys()))
                 if failure is not None:
                     report = ValidationReport(False, report.errors + (str(failure),), score=0.0)
-                route_rate = None
-                if info.get("route"):
-                    route_rate = next(
-                        (profile["cost_per_1k_tokens"] for profile in json.loads(current_run["route_profiles"] or "[]") if profile["id"] == info["route"]["profile_id"]),
-                        None,
-                    )
-                actual = self._actual_cost(result.envelope, current_run, route_rate)
+                actual = self._actual_cost(result.envelope, current_run, info.get("cost_per_1k_tokens"))
                 remaining_reserved = max(0.0, current_run["reserved_cost"] - info["estimate"])
                 if (
                     not math.isfinite(actual)
@@ -1868,7 +1874,7 @@ class DAGScheduler:
                 # 在扣费前再次读取运行状态，缩小 cancel/deadline 竞态窗口。
                 fresh_run = self._get_run(run_id)
                 if fresh_run["cancel_requested"] or time.time() >= fresh_run["deadline_at"]:
-                    self._fail_attempt(run_id, info, "run cancelled or deadline exceeded", events)
+                    self._fail_attempt(run_id, info, "run cancelled or deadline exceeded", events, result)
                     return
                 claim_time = time.time()
                 claimed = self._conn.execute(
@@ -1892,7 +1898,7 @@ class DAGScheduler:
                     self._conn.execute("DELETE FROM artifacts WHERE run_id=? AND node_id=?", (run_id, node.id))
                     fresh = self._get_run(run_id)
                     if fresh["cancel_requested"] or time.time() >= fresh["deadline_at"]:
-                        self._fail_attempt(run_id, info, "run cancelled or deadline exceeded", events)
+                        self._fail_attempt(run_id, info, "run cancelled or deadline exceeded", events, result)
                     return
                 self._release(run_id, node.id, attempt_id, info["estimate"], actual)
                 self._conn.execute("UPDATE nodes SET status='succeeded',progress=1,error=NULL,current_attempt_id=NULL WHERE run_id=? AND id=? AND status='running' AND current_attempt_id=?", (run_id, node.id, attempt_id))
@@ -1900,7 +1906,7 @@ class DAGScheduler:
                 self._event(run_id, node.id, "task.completed", None)
                 events.append(f"{node.id}: succeeded")
         except Exception as exc:  # adapter failures are finite-retry task failures
-            self._fail_attempt(run_id, info, str(exc), events)
+            self._fail_attempt(run_id, info, str(exc), events, result)
 
     def result(self, run_id: str, events: Iterable[str] = ()) -> RunResult:
         with self._lock:

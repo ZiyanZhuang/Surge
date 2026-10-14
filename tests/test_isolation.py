@@ -22,6 +22,7 @@ from surge_cluster import (
     IsolatedAdapter,
     LocalEchoAdapter,
     NodeSpec,
+    RouteProfile,
     RunSpec,
     WorkerResult,
 )
@@ -70,6 +71,25 @@ class _PaidFailureAdapter:
     def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
         result = WorkerResult({"answer": "failed", "usage": {"total_tokens": 15, "cost": 0.25}})
         raise AdapterFailure("paid verification failed", kind="verification", result=result)
+
+
+class _PaidInvalidResultAdapter:
+    def __init__(self, mode: str):
+        self.mode = mode
+
+    def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
+        envelope = dict(LocalEchoAdapter().run(node, context).envelope)
+        envelope["usage"] = {"total_tokens": 15, "cost": 0.001}
+        if self.mode == "artifact-rate":
+            del envelope["usage"]["cost"]
+        if self.mode == "envelope":
+            envelope["extra"] = float("nan")
+        artifacts = {}
+        if self.mode in ("artifact-type", "artifact-rate"):
+            artifacts = {"bad": 1}
+        elif self.mode == "artifact-size":
+            artifacts = {"bad": "x" * (2 * 1024 * 1024 + 1)}
+        return WorkerResult(envelope, artifacts)
 
 
 class _InvalidArtifactAdapter:
@@ -129,6 +149,26 @@ def _node(**overrides: Any) -> NodeSpec:
 
 
 class IsolationTests(unittest.TestCase):
+    def test_completed_invalid_results_retain_known_costs(self) -> None:
+        for isolated in (False, True):
+            for mode in ("artifact-type", "artifact-size", "artifact-rate", "envelope"):
+                if not isolated and mode == "envelope":
+                    continue
+                with self.subTest(isolated=isolated, mode=mode), tempfile.TemporaryDirectory() as directory:
+                    adapter = _PaidInvalidResultAdapter(mode)
+                    if isolated:
+                        adapter = IsolatedAdapter(adapter)
+                    with DAGScheduler(Path(directory) / "state.sqlite") as scheduler:
+                        scheduler.submit(RunSpec("paid-invalid", budget_cost=1, route_profiles=(RouteProfile("p", "provider", "model", cost_per_1k_tokens=2),)), [_node(max_attempts=1, max_tokens=100)])
+                        result = scheduler.execute(adapter)
+                        self.assertEqual(result.status, "failed")
+                        expected = 0.03 if mode == "artifact-rate" else 0.001
+                        self.assertAlmostEqual(result.spent_cost, expected)
+                        attempt = scheduler._conn.execute("SELECT cost,envelope FROM attempts").fetchone()
+                        self.assertAlmostEqual(attempt["cost"], expected)
+                        self.assertIsNotNone(attempt["envelope"])
+                        self.assertEqual(scheduler.artifacts("paid-invalid"), [])
+
     def test_abrupt_child_exit_is_a_structured_crash(self) -> None:
         isolated = IsolatedAdapter(_CrashAdapter())
         with self.assertRaises(AdapterFailure) as caught:

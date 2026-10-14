@@ -94,6 +94,7 @@ def _child_entry(
             "worker_pid": os.getpid(),
         }
     )
+    result = None
     try:
         result = adapter.run(node, context)
         if not isinstance(result, WorkerResult):
@@ -114,12 +115,20 @@ def _child_entry(
             "retryable": bool(getattr(exc, "retryable", False)),
             "traceback_tail": traceback.format_exc(limit=6)[-2000:],
         }
-        failed_result = getattr(exc, "result", None)
+        failed_result = getattr(exc, "result", None) or result
         if isinstance(failed_result, WorkerResult):
             try:
                 payload["result"] = _json_safe({"envelope": failed_result.envelope, "artifacts": failed_result.artifacts})
             except (TypeError, ValueError):
-                pass
+                envelope = failed_result.envelope
+                usage = envelope.get("usage", {}) if isinstance(envelope, Mapping) else {}
+                try:
+                    payload["result"] = _json_safe({"envelope": {
+                        "persisted": "unavailable", "reason": "isolated result is not JSON serializable",
+                        "usage": {key: usage[key] for key in ("total_tokens", "cost") if isinstance(usage, Mapping) and key in usage},
+                    }, "artifacts": {}})
+                except (TypeError, ValueError):
+                    pass
     # 内层 adapter 的逐次调用证据留在子进程里，这里把它带回父进程，避免隔离
     # 让报告失去可审计的调用明细。
     calls = getattr(adapter, "calls", None)

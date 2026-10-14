@@ -53,6 +53,7 @@ strict 模式下，`answer`、`claims`、`citations`、`confidence`、`warnings`
 
 - Adapter 抛出异常：当前 attempt 失败；在 `max_attempts` 未耗尽时有限重试，否则节点为 `failed`，下游为 `blocked`；
 - 若异常为 `AdapterFailure(result=...)`，其中已完成的结果仍接受相同 envelope/预算校验并结算已报告用量，但绝不会提交为成功；失败 envelope 保留用于审计，artifact 绑定不进入下游。隔离层透传这份失败结果。
+- 已返回结果在 artifact 写入、输出校验或隔离序列化阶段失败时，同样结算可确认的费用。无法序列化的隔离输出只携带明确标记的失败投影与 usage，不能因此变成成功；尚未收到的费用不猜测。
 - 超时：发送协作式停止信号，旧 future 在自然结束前保留调度槽位；
 - 非法 envelope 或非法 evidence：按验证失败处理，不进入下游证据集合；
 - 预算或输出大小违反硬约束：拒绝提交成功结果，并记录事件/账本；
