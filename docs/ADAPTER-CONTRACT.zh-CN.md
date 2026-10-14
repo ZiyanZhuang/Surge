@@ -119,6 +119,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 `EvidenceVerifier(require_answer_in_evidence=True)` 要求答案中全部数值出现在可读的已引用证据中；比较保留正负号，并把等值十进制/科学计数法视为相同值。这只是数值存在性检查，不推断单位、因果或科学正确性。
 
+隔离配置 `hard_timeout_grace` 必须是有限非负数，`kill_grace` 必须是有限正数，均拒绝布尔值、NaN 与 Infinity，避免硬超时失效或回收等待异常。
+
 ## 只读审计面
 
 调度器提供五个只读方法，供验证器、Gate 脚本和外部审计使用；它们不改变任何状态，也不参与调度决策：

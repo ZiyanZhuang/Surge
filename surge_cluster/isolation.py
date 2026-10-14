@@ -30,6 +30,7 @@
 from __future__ import annotations
 
 import json
+import math
 import multiprocessing as mp
 import os
 import queue as queue_module
@@ -148,10 +149,10 @@ class IsolatedAdapter:
             raise ValueError("adapter must expose run(node, context)")
         if isinstance(max_processes, bool) or not isinstance(max_processes, int) or max_processes < 1:
             raise ValueError("max_processes must be a positive integer")
-        if not isinstance(hard_timeout_grace, (int, float)) or hard_timeout_grace < 0:
-            raise ValueError("hard_timeout_grace must not be negative")
-        if not isinstance(kill_grace, (int, float)) or kill_grace <= 0:
-            raise ValueError("kill_grace must be positive")
+        if isinstance(hard_timeout_grace, bool) or not isinstance(hard_timeout_grace, (int, float)) or not math.isfinite(hard_timeout_grace) or hard_timeout_grace < 0:
+            raise ValueError("hard_timeout_grace must be a finite non-negative number")
+        if isinstance(kill_grace, bool) or not isinstance(kill_grace, (int, float)) or not math.isfinite(kill_grace) or kill_grace <= 0:
+            raise ValueError("kill_grace must be a finite positive number")
         if start_method not in mp.get_all_start_methods():
             raise ValueError(f"unsupported start method: {start_method}")
         self.adapter = adapter

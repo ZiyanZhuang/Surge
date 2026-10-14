@@ -108,6 +108,13 @@ def _node(**overrides: Any) -> NodeSpec:
 
 
 class IsolationTests(unittest.TestCase):
+    def test_timeout_graces_require_finite_numbers(self) -> None:
+        for field in ("hard_timeout_grace", "kill_grace"):
+            for value in (True, float("nan"), float("inf"), float("-inf"), -1):
+                with self.subTest(field=field, value=value):
+                    with self.assertRaisesRegex(ValueError, field):
+                        IsolatedAdapter(LocalEchoAdapter(), **{field: value})
+
     def test_result_round_trip_through_scheduler(self) -> None:
         isolated = IsolatedAdapter(LocalEchoAdapter(), max_processes=2)
         with tempfile.TemporaryDirectory() as directory:
