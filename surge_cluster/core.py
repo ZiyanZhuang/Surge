@@ -1528,7 +1528,7 @@ class DAGScheduler:
                                 continue
                             target = total * policy.target_progress
                             reserved_value = self._stage_inflight_value(rows, stage_name) + dispatched_value_by_stage.get(stage_name, 0.0)
-                            if policy.defer_excess and completed + reserved_value >= target - 1e-9:
+                            if policy.defer_excess and policy.target_progress < 1.0 and completed + reserved_value >= target - 1e-9:
                                 continue
                         progress = min(1.0, (completed + active_value) / total) if total else 0.0
                         budget_row = self._conn.execute("SELECT budget_cost,spent_cost,reserved_cost FROM runs WHERE id=?", (run_id,)).fetchone()

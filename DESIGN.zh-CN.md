@@ -98,6 +98,7 @@ nodes = [
 - `max_workers` 是每个 run 的并发上限（`DAGScheduler(max_workers=...)` 只是每个 run 的默认上限），不是同一 scheduler 上所有 run 的全局池上限；不同 run 并发执行时总线程数可能相加。同一 scheduler 的同一 run 会被 `_active_runs` 拒绝重入。当前实现把超时 future 保留在槽位直到自然结束，因此合作式 worker 和不合作 worker 的同时调用数都不会因重试叠加。就绪节点按 priority、incremental_value、urgency、wave、id 稳定排序；若需要全局物理并发上限或在不合作调用时及时释放槽位，应使用共享 semaphore/进程 worker。
 - 可为每个 stage 设置 `max_in_flight`、`dispatch_batch` 和 `target_progress`；每次只补足当前增量需求，不无脑启动全部 ready 节点。
 - `target_progress < 1` 且达到目标后，低边际价值的剩余节点标记为 `deferred`；它们不消耗模型调用，但会保留审计状态。
+- `target_progress=1` 要求执行全部节点，包括 `incremental_value=0` 的节点；零价值不代表可以省略依赖或让节点无限等待。
 - 每个 wave 等待前置 wave 达到 `wave_success_threshold`，默认 1.0；没有配置 stage policy 时保持旧行为。
 - 可配置 `RouteProfile`：先按 task class、stage quality floor、route concurrency 和预算硬过滤，再按质量、速度、进度、成本打分，决定 provider/model/reasoning effort，并透传到 `context["route"]`。
 - 调用前按选中 route 的 `max_tokens * cost_per_1k_tokens` reservation；暂时被其他任务占用的预算会 deferred 等待，硬耗尽才 blocked；调用后按 usage 结算。

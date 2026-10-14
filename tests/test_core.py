@@ -790,6 +790,19 @@ class CoreTests(unittest.TestCase):
                     self.assertEqual(result.succeeded, ("n0", "n1"))
                     self.assertEqual(result.deferred, ())
 
+    def test_full_stage_target_finishes_zero_value_nodes(self):
+        for values in ((0.0, 0.0), (1.0, 0.0)):
+            with self.subTest(values=values):
+                directory = self._run_dir()
+                with self.scheduler(directory) as scheduler:
+                    scheduler.submit(
+                        RunSpec("zero-value", deadline_seconds=0.3, stage_policies=(StagePolicy("work"),)),
+                        [NodeSpec(f"n{i}", "work", stage="work", incremental_value=value) for i, value in enumerate(values)],
+                    )
+                    result = scheduler.execute(CountingAdapter())
+                    self.assertEqual(result.status, "succeeded")
+                    self.assertEqual(result.succeeded, ("n0", "n1"))
+
     def test_artifact_write_near_windows_path_limit(self):
         directory = self._run_dir().resolve()
         root = directory / ("p" * max(1, 190 - len(str(directory)) - 1))
