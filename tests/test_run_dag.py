@@ -116,6 +116,18 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIsNone(_FakeHandler.received)
 
+    def test_invalid_numeric_options_have_the_same_usage_error_in_both_modes(self) -> None:
+        self._write_plan()
+        for mode in (("--dry-run",), ("--endpoint", self.url)):
+            for option, values in (("--timeout", ("nan", "inf", "-inf", "0")), ("--cost-per-1k-tokens", ("nan", "inf", "-inf", "-1"))):
+                for value in values:
+                    with self.subTest(mode=mode, option=option, value=value):
+                        code, report = self._run(*mode, f"{option}={value}")
+                        self.assertEqual(code, 2)
+                        self.assertEqual(report["error_kind"], "usage")
+                        self.assertIn(option, report["error"])
+        self.assertIsNone(_FakeHandler.received)
+
     def test_real_mode_requires_explicit_endpoint(self) -> None:
         self._write_plan()
         code, report = self._run()

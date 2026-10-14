@@ -339,6 +339,10 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertNotIn("SECRET-PROMPT-TEXT", json.dumps(adapter.calls))
 
     def test_invalid_configuration_is_rejected(self) -> None:
+        for name in ("timeout", "cost_per_1k_tokens"):
+            for value in (float("nan"), float("inf"), float("-inf")):
+                with self.subTest(name=name, value=value), self.assertRaises(ValueError):
+                    HttpWorkerAdapter(self.url, "model", **{name: value})
         with self.assertRaises(ValueError):
             HttpWorkerAdapter("ftp://example.invalid", "model")
         with self.assertRaises(ValueError):

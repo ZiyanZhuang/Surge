@@ -112,6 +112,8 @@ adapter = HttpWorkerAdapter(
 
 读取失败、非法 UTF-8/JSON、错误字段类型与不可表示数值也属于计划错误。schema_version 必须是整数版本号；持久化整数字段限于 SQLite 有符号 64 位范围，超限在提交前拒绝，Python API 与 CLI 都不会留下半个 run。
 
+CLI 覆盖参数的错误属于 usage（退出码 2）：`--timeout` 必须有限且大于零，`--cost-per-1k-tokens` 必须有限且非负；dry-run 与真实模式执行相同检查。
+
 ## 组合顺序：验证在外，隔离在内
 
 两个可选装饰器保持同一 `WorkerAdapter` 协议，因此可以和任何适配器组合：

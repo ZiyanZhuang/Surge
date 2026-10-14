@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import platform
 import shutil
 import sys
@@ -172,8 +173,10 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path]:
         ), args.output
     if args.max_output_tokens < 1:
         return 2, _error_report("usage", "--max-output-tokens must be positive"), args.output
-    if args.timeout <= 0:
-        return 2, _error_report("usage", "--timeout must be positive"), args.output
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        return 2, _error_report("usage", "--timeout must be a finite positive number"), args.output
+    if args.cost_per_1k_tokens is not None and (not math.isfinite(args.cost_per_1k_tokens) or args.cost_per_1k_tokens < 0):
+        return 2, _error_report("usage", "--cost-per-1k-tokens must be a finite non-negative number"), args.output
     try:
         plan = load_plan(args.plan)
     except PlanError as exc:
