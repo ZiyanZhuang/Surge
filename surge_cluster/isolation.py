@@ -303,6 +303,7 @@ class IsolatedAdapter:
                 for key in _FORWARDED_CONTEXT_KEYS
                 if isinstance(context, Mapping) and key in context
             }
+            completed = None
             try:
                 with ExitStack() as cleanup:
                     parent_conn, child_conn = self._ctx.Pipe(duplex=False)
@@ -327,25 +328,25 @@ class IsolatedAdapter:
                     child_conn.close()
                     reader.start()
                     payload = self._await_result(parent_conn, process, stop_event, should_stop, hard_timeout)
-            except AdapterFailure:
+                    result_payload = payload if payload.get("ok") else payload.get("result")
+                    if isinstance(result_payload, dict):
+                        completed = WorkerResult(result_payload["envelope"], result_payload["artifacts"])
+                    record = payload.get("adapter_call")
+                    if isinstance(record, dict):
+                        self.calls.append({**record, "node_id": record.get("node_id") or node.id})
+            except AdapterFailure as exc:
+                if exc.result is None:
+                    exc.result = completed
                 raise
             except Exception as exc:
-                raise AdapterFailure(f"isolated worker could not start or complete: {exc}", kind="spawn") from exc
+                raise AdapterFailure(f"isolated worker could not start or complete: {exc}", kind="spawn", result=completed) from exc
             if not payload.get("ok"):
-                record = payload.get("adapter_call")
-                if isinstance(record, dict):
-                    self.calls.append({**record, "node_id": record.get("node_id") or node.id})
-                failed = payload.get("result")
-                failed_result = WorkerResult(failed["envelope"], failed["artifacts"]) if isinstance(failed, dict) else None
                 raise AdapterFailure(
                     str(payload.get("error") or "isolated worker failed"),
                     kind=str(payload.get("kind") or "isolated"),
                     retryable=bool(payload.get("retryable")),
-                    result=failed_result,
+                    result=completed,
                 )
-            record = payload.get("adapter_call")
-            if isinstance(record, dict):
-                self.calls.append({**record, "node_id": record.get("node_id") or node.id})
             return WorkerResult(
                 envelope=payload["envelope"],
                 artifacts=payload["artifacts"],

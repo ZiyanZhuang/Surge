@@ -246,6 +246,40 @@ class IsolationTests(unittest.TestCase):
                 factory.assert_called_once()
                 process.terminate.assert_called()
                 process.kill.assert_called()
+    def test_cleanup_failure_preserves_completed_payload_cost_and_call_record(self) -> None:
+        for child_ok, cleanup_kind in ((True, "reap"), (False, "reap"), (True, "pipe"), (False, "pipe")):
+            with self.subTest(child_ok=child_ok, cleanup_kind=cleanup_kind):
+                isolated = IsolatedAdapter(LocalEchoAdapter(), kill_grace=0.01)
+                node = _node(max_attempts=1)
+                envelope = dict(LocalEchoAdapter().run(node, {}).envelope)
+                envelope["usage"] = {"total_tokens": 15, "cost": 0.001}
+                completed = {"envelope": envelope, "artifacts": {}}
+                payload = {"ok": child_ok, "adapter_call": {"ok": child_ok, "kind": "ok" if child_ok else "verification"}}
+                payload.update(completed if child_ok else {"result": completed, "kind": "verification", "error": "paid failure"})
+                process = mock.Mock()
+                process.pid = 123
+                process.is_alive.return_value = cleanup_kind == "reap"
+                parent, child = isolated._ctx.Pipe(duplex=False)
+                real_close = parent.close
+
+                def close_parent():
+                    real_close()
+                    if cleanup_kind == "pipe":
+                        raise OSError("injected pipe cleanup failure")
+
+                with tempfile.TemporaryDirectory() as directory, DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                    scheduler.submit(RunSpec("cleanup-cost"), [node])
+                    with mock.patch.object(isolated._ctx, "Pipe", return_value=(parent, child)), mock.patch.object(parent, "close", side_effect=close_parent), mock.patch.object(isolated._ctx, "Process", return_value=process), mock.patch.object(isolated, "_await_result", return_value=payload):
+                        result = scheduler.execute(isolated)
+                    self.assertEqual(result.status, "failed")
+                    self.assertAlmostEqual(result.spent_cost, 0.001)
+                    self.assertEqual(scheduler.artifacts("cleanup-cost"), [])
+                    self.assertEqual(len(isolated.calls), 1)
+                    self.assertEqual(isolated.calls[0]["node_id"], node.id)
+                    self.assertEqual(isolated._reap_failed, cleanup_kind == "reap")
+                    self.assertTrue(parent.closed)
+                    self.assertTrue(child.closed)
+
     def test_timeout_graces_require_finite_numbers(self) -> None:
         for field in ("hard_timeout_grace", "kill_grace"):
             for value in (True, float("nan"), float("inf"), float("-inf"), -1, 10 ** 400):

@@ -56,6 +56,7 @@ strict 模式下，`answer`、`claims`、`citations`、`confidence`、`warnings`
 - 线程池派发失败：对应 attempt 按正常失败/有限重试结算，其他已派发任务继续；worker 在 Host 确认 submit 成功前不调用 adapter，避免入队后抛错造成无主调用。
 - Adapter 抛出异常：当前 attempt 失败；在 `max_attempts` 未耗尽时有限重试，否则节点为 `failed`，下游为 `blocked`；
 - 若异常为 `AdapterFailure(result=...)`，其中已完成的结果仍接受相同 envelope/预算校验并结算已报告用量，但绝不会提交为成功；失败 envelope 保留用于审计，artifact 绑定不进入下游。隔离层透传这份失败结果。
+- 隔离层已经收到有效结果后，即使进程回收或 IPC 清理失败，也通过失败结果保留已知用量和调用记录；回收失败仍封锁后续进程准入。
 - 已返回结果在 artifact 写入、输出校验或隔离序列化阶段失败时，同样结算可确认的费用。无法序列化的隔离输出只携带明确标记的失败投影与 usage，不能因此变成成功；尚未收到的费用不猜测。
 - HTTP 响应已完整且 usage 有效后，即使空输出/答案、输出超限、提取器错误、UTF-8 处理错误或返回后取消，仍通过失败结果结算该适配器单价下的已知费用；不提交 artifact。内部响应处理异常使用 `kind="response"`。无有效 usage 的传输/协议失败不虚构费用。
 - message_start/message_delta/message_stop 完整且仅缺文本 delta 时，保持 SSE 失败，同时保留合法已报告 usage，包含 output_tokens=0 时的输入费用；不据此推测缺少消息终止边界的流式账单。
