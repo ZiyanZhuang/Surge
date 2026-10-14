@@ -727,6 +727,24 @@ class CoreTests(unittest.TestCase):
                         scheduler.submit(RunSpec("deep", max_nodes=1200), nodes)
                         self.assertEqual(len(scheduler.snapshot("deep")), 1200)
 
+    def test_busy_affordable_route_waits_instead_of_blocking(self):
+        with self.scheduler(self._run_dir()) as scheduler:
+            scheduler.submit(
+                RunSpec(
+                    "route-intersection", budget_cost=0.003, max_workers=2,
+                    route_profiles=(
+                        RouteProfile("expensive", "p", "large", cost_per_1k_tokens=0.01, max_concurrency=1),
+                        RouteProfile("cheap", "p", "small", cost_per_1k_tokens=0.001, max_concurrency=1),
+                    ),
+                ),
+                [NodeSpec(f"n{i}", "work", max_tokens=1000) for i in range(2)],
+            )
+            adapter = RoutingAdapter(delay=0.05)
+            result = scheduler.execute(adapter)
+            self.assertEqual(result.status, "succeeded")
+            self.assertEqual(result.succeeded, ("n0", "n1"))
+            self.assertEqual(adapter.max_active, 1)
+
     def test_execute_setup_failure_releases_owner_claim(self):
         directory = self._run_dir()
         artifact_parent = directory / "run-artifacts"

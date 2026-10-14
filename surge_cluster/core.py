@@ -430,10 +430,11 @@ class DemandAwareRouter:
             compatible.append(profile)
         if not compatible:
             return "incompatible"
-        if not any(active_by_route.get(profile.id, 0) < profile.max_concurrency for profile in compatible):
-            return "capacity"
-        if not any(node.max_tokens / 1000.0 * profile.cost_per_1k_tokens <= remaining_budget + 1e-12 for profile in compatible):
+        affordable = [profile for profile in compatible if node.max_tokens / 1000.0 * profile.cost_per_1k_tokens <= remaining_budget + 1e-12]
+        if not affordable:
             return "budget"
+        if not any(active_by_route.get(profile.id, 0) < profile.max_concurrency for profile in affordable):
+            return "capacity"
         return "available"
 
     def choose(

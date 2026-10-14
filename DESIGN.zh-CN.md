@@ -102,6 +102,7 @@ nodes = [
 - 每个 wave 等待前置 wave 达到 `wave_success_threshold`，默认 1.0；没有配置 stage policy 时保持旧行为。
 - 提交时以迭代拓扑消除检测依赖环，不受 Python 递归深度限制；节点数仍由显式 max_nodes 限制。
 - 可配置 `RouteProfile`：先按 task class、stage quality floor、route concurrency 和预算硬过滤，再按质量、速度、进度、成本打分，决定 provider/model/reasoning effort，并透传到 `context["route"]`。
+- 可用性判断要求同一条路由同时满足预算与容量；可负担路由忙碌时等待它释放，不能因为另一条昂贵路由有空位就错误 blocked。
 - 调用前按选中 route 的 `max_tokens * cost_per_1k_tokens` reservation；暂时被其他任务占用的预算会 deferred 等待，硬耗尽才 blocked；调用后按 usage 结算。
 - 每次执行都有 attempt、lease 和事件记录；长任务通过 context 中的 `heartbeat()` 延长 lease。
 - Host 重启后调用 `recover_stale()` 回收过期 lease 并重新排队，因此语义是 **at-least-once**；adapter 必须具备幂等键意识，不能宣称 exactly-once。`recover_stale(owner_id=...)` 只有在调用者持有 run owner 或原 owner lease 已过期时才会回收未过期的旧 attempt；活跃的其他 owner 只能被自然过期 lease 触发回收。
