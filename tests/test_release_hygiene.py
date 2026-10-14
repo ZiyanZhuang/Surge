@@ -2,14 +2,31 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
+GENERATED_DIRS = {".git", "__pycache__", ".venv", "venv", "build", "dist", ".release-build", ".release-installed", "smoke-runs"}
 
 
 class ReleaseHygieneTests(unittest.TestCase):
+    def test_path_scan_excludes_generated_files_but_checks_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            local_path = "/".join(("", "home", "developer", "project"))
+            for name in (".venv", "venv", "build", ".release-build", ".release-installed"):
+                generated = root / name / "metadata.json"
+                generated.parent.mkdir()
+                generated.write_text(local_path, encoding="utf-8")
+            with mock.patch(f"{__name__}.ROOT", root):
+                self.test_text_does_not_contain_user_specific_absolute_paths()
+                (root / "source.json").write_text(local_path, encoding="utf-8")
+                with self.assertRaises(AssertionError):
+                    self.test_text_does_not_contain_user_specific_absolute_paths()
+
     def test_release_documents_and_fixture_notice_exist(self):
         required = [
             ROOT / "README.md",
@@ -58,11 +75,10 @@ class ReleaseHygieneTests(unittest.TestCase):
         self.assertIn('"build==1.2.2"', pyproject)
 
     def test_no_unignored_runtime_or_secret_files_are_present(self):
-        ignored_parts = {"__pycache__", ".venv", "build", "dist", ".release-build", "smoke-runs"}
         forbidden_suffixes = {".sqlite3", ".db", ".pem", ".key"}
         forbidden_names = {".env", "credentials.json", "secrets.json"}
         for path in ROOT.rglob("*"):
-            if not path.is_file() or ignored_parts.intersection(path.parts):
+            if not path.is_file() or GENERATED_DIRS.intersection(path.relative_to(ROOT).parts):
                 continue
             self.assertNotIn(path.name, forbidden_names, path)
             self.assertNotIn(path.suffix.lower(), forbidden_suffixes, path)
@@ -71,7 +87,7 @@ class ReleaseHygieneTests(unittest.TestCase):
         user_path = re.compile(r"(?i)(?:[A-Z]:\\(?:Users|Documents and Settings)\\[^\r\n]+|/(?:home|Users)/[^/\s]+(?:/|$))")
         text_suffixes = {".md", ".py", ".json", ".jsonl", ".toml", ".yml", ".yaml", ".txt"}
         for path in ROOT.rglob("*"):
-            if not path.is_file() or ".git" in path.parts or path.suffix.lower() not in text_suffixes:
+            if not path.is_file() or GENERATED_DIRS.intersection(path.relative_to(ROOT).parts) or path.suffix.lower() not in text_suffixes:
                 continue
             text = path.read_text(encoding="utf-8")
             self.assertIsNone(user_path.search(text), path)
