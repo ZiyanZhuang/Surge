@@ -431,6 +431,15 @@ class ModelVerifier:
     ):
         if not callable(getattr(adapter, "run", None)):
             raise ValueError("verifier adapter must expose run(node, context)")
+        if timeout_seconds is not None and (not _is_finite_number(timeout_seconds) or timeout_seconds <= 0):
+            raise ValueError("timeout_seconds must be a finite positive number")
+        if max_tokens is not None and (isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or max_tokens < 1):
+            raise ValueError("max_tokens must be a positive integer")
+        for name, value in (("max_evidence_chars", max_evidence_chars), ("max_total_evidence_chars", max_total_evidence_chars)):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        if not isinstance(system_prompt, str):
+            raise ValueError("system_prompt must be a string")
         self.adapter = adapter
         self.timeout_seconds = timeout_seconds
         self.max_tokens = max_tokens

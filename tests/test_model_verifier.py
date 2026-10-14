@@ -271,6 +271,21 @@ class ModelVerifierUnitTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ModelVerifier(object())
 
+    def test_invalid_option_values_are_rejected_before_dispatch(self) -> None:
+        adapter = _VerdictAdapter('{"pass":true,"score":1,"issues":[]}')
+        options = {
+            "timeout_seconds": (0, -1, True, float("nan"), float("inf"), 10 ** 400),
+            "max_tokens": (0, -1, True, 1.5, "5"),
+            "max_evidence_chars": (0, -1, True, 1.5, "5"),
+            "max_total_evidence_chars": (0, -1, True, 1.5, "5"),
+            "system_prompt": (None, False),
+        }
+        for name, values in options.items():
+            for value in values:
+                with self.subTest(name=name, value=value), self.assertRaisesRegex(ValueError, name):
+                    ModelVerifier(adapter, **{name: value})
+        self.assertEqual(adapter.calls, 0)
+
     def test_verifier_call_is_recorded_with_evidence_keys(self) -> None:
         _, verifier, _ = self._verify('{"pass": true, "score": 1, "issues": []}')
         self.assertEqual(verifier.calls[0]["node_id"], "n1/verify")

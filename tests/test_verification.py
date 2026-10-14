@@ -26,6 +26,12 @@ from surge_cluster.verification import ModelVerifier, VerificationIssue, Verific
 
 
 class JsonSafetyTests(unittest.TestCase):
+    def test_zero_evidence_limit_is_rejected_before_verifier_dispatch(self) -> None:
+        adapter = mock.Mock()
+        with self.assertRaisesRegex(ValueError, "max_total_evidence_chars"):
+            ModelVerifier(adapter, max_total_evidence_chars=0)
+        adapter.run.assert_not_called()
+
     def test_exhausted_node_budget_fails_before_verifier_dispatch(self) -> None:
         adapter = mock.Mock()
         with self.assertRaises(AdapterFailure) as caught:
