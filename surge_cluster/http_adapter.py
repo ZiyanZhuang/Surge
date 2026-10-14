@@ -262,15 +262,21 @@ def call_messages_endpoint(
             f"adapter content-type is not SSE: {content_type!r}", kind="content-type", retryable=False
         )
     text, usage, events = parse_sse(payload)
-    missing = [event for event in REQUIRED_SSE_EVENTS if event not in events]
-    if missing:
-        raise AdapterFailure(
-            f"adapter SSE missing events: {', '.join(missing)}", kind="sse", retryable=False
-        )
-    positions = [events.index(event) for event in REQUIRED_SSE_EVENTS]
+    positions = [events.index(event) for event in REQUIRED_SSE_EVENTS if event in events]
     if positions != sorted(positions):
         raise AdapterFailure(
             "adapter SSE event order is incomplete or invalid", kind="sse", retryable=False
+        )
+    missing = [event for event in REQUIRED_SSE_EVENTS if event not in events]
+    if missing:
+        failed_result = None
+        if missing == ["content_block_delta"]:
+            # 完整的空输出也可能产生已报告输入费用。
+            known_usage = require_usage(usage, int(max_output_tokens))
+            failed_result = WorkerResult({"usage": {"total_tokens": sum(known_usage.values())}})
+        raise AdapterFailure(
+            f"adapter SSE missing events: {', '.join(missing)}", kind="sse", retryable=False,
+            result=failed_result,
         )
     normalized_usage = require_usage(usage, int(max_output_tokens))
     if not text.strip():

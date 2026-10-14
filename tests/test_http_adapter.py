@@ -309,6 +309,24 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, "failed")
         self.assertEqual(adapter.calls[-1]["kind"], "sse")
 
+    def test_complete_empty_stream_keeps_reported_input_cost(self) -> None:
+        _FakeHandler.payload = b"\n\n".join(part for part in _sse(output_tokens=0).split(b"\n\n") if not part.startswith(b"event: content_block_delta\n"))
+        adapter = self._adapter()
+        result, _ = self._run(adapter)
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(adapter.calls[-1]["kind"], "sse")
+        self.assertAlmostEqual(result.spent_cost, 10 / 1000 * 0.01)
+
+    def test_misordered_empty_stream_does_not_claim_complete_usage(self) -> None:
+        parts = [part for part in _sse(output_tokens=0).split(b"\n\n") if not part.startswith(b"event: content_block_delta\n")]
+        delta_index = next(index for index, part in enumerate(parts) if part.startswith(b"event: message_delta\n"))
+        parts[0], parts[delta_index] = parts[delta_index], parts[0]
+        _FakeHandler.payload = b"\n\n".join(parts)
+        with self.assertRaises(AdapterFailure) as caught:
+            self._adapter().run(NodeSpec("n", "work"), {})
+        self.assertEqual(caught.exception.kind, "sse")
+        self.assertIsNone(caught.exception.result)
+
     def test_malformed_sse_frames_fail_closed(self) -> None:
         payloads = {
             "invalid-json": _sse().replace(b'{"type":"message_start"}', b'not-json'),

@@ -247,6 +247,17 @@ class RunDagCliTests(unittest.TestCase):
         self.assertAlmostEqual(report["result"]["spent_cost"], 20 / 1000 * 0.01)
         self.assertEqual(report["adapter_calls"][0]["kind"], "output-limit")
 
+    def test_complete_stream_without_text_keeps_known_usage(self) -> None:
+        _FakeHandler.payload = b"\n\n".join(part for part in _sse().split(b"\n\n") if not part.startswith(b"event: content_block_delta\n"))
+        mapping = _plan_mapping()
+        for node in mapping["nodes"]:
+            node["max_attempts"] = 1
+        self._write_plan(mapping)
+        code, report = self._run("--endpoint", self.url)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["adapter_calls"][0]["kind"], "sse")
+        self.assertAlmostEqual(report["result"]["spent_cost"], 20 / 1000 * 0.01)
+
     def test_real_mode_runs_through_the_http_adapter(self) -> None:
         self._write_plan()
         code, report = self._run("--endpoint", self.url, "--model", "fake-model")
