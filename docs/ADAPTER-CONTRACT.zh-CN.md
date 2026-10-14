@@ -137,7 +137,9 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 隔离配置 `hard_timeout_grace` 必须是有限非负数，`kill_grace` 必须是有限正数，均拒绝布尔值、NaN 与 Infinity，避免硬超时失效或回收等待异常。
 
-spawn 失败以 `AdapterFailure(kind="spawn")` 返回，不计入成功 started 统计；未启动的 process 不执行 join。父子管道与控制队列均走 finally 清理，即使 reap 失败仍尝试关闭 IPC。
+初始化失败以 `AdapterFailure(kind="spawn")` 返回；started 只统计成功的 `process.start()`，该调用失败不计数，未启动的 process 不执行 join。父子管道与控制队列进入资源清理，即使 reap 失败仍尝试关闭 IPC。
+
+IPC 分配阶段同样受资源清理保护：Queue、Event、Process 或线程初始化失败时，已分配的管道/队列立即关闭；清理按逆序逐项运行，某项清理异常不能跳过剩余资源。
 
 terminate/kill 抛出 OS 错误或有界等待后子进程仍存活时，隔离实例以 `kind="reap"` 失败并拒绝后续 worker；不能把逻辑槽位释放误当成物理进程已退出。调用者处理残留进程后再建立新实例。
 

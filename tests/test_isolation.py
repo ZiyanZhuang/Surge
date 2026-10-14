@@ -154,6 +154,25 @@ def _node(**overrides: Any) -> NodeSpec:
 
 
 class IsolationTests(unittest.TestCase):
+    def test_partial_ipc_setup_failure_closes_allocated_resources(self) -> None:
+        for stage in ("Queue", "Event", "Process"):
+            with self.subTest(stage=stage):
+                isolated = IsolatedAdapter(LocalEchoAdapter())
+                parent, child = isolated._ctx.Pipe(duplex=False)
+                control = mock.Mock()
+                stop = mock.Mock()
+                with mock.patch.object(isolated._ctx, "Pipe", return_value=(parent, child)), mock.patch.object(isolated._ctx, "Queue", return_value=control) as queue_factory, mock.patch.object(isolated._ctx, "Event", return_value=stop) as event_factory, mock.patch.object(isolated._ctx, "Process") as process_factory:
+                    factories = {"Queue": queue_factory, "Event": event_factory, "Process": process_factory}
+                    factories[stage].side_effect = OSError("IPC resources unavailable")
+                    with self.assertRaises(AdapterFailure) as caught:
+                        isolated.run(_node(), {})
+                self.assertEqual(caught.exception.kind, "spawn")
+                self.assertTrue(parent.closed)
+                self.assertTrue(child.closed)
+                if stage != "Queue":
+                    control.close.assert_called_once()
+                self.assertEqual(isolated.stats()["started"], 0)
+
     def test_completed_invalid_results_retain_known_costs(self) -> None:
         for isolated in (False, True):
             for mode in ("artifact-type", "artifact-size", "artifact-rate", "envelope", "envelope-depth"):

@@ -29,6 +29,7 @@
 
 from __future__ import annotations
 
+from contextlib import ExitStack
 import json
 import math
 import multiprocessing as mp
@@ -303,43 +304,34 @@ class IsolatedAdapter:
                 for key in _FORWARDED_CONTEXT_KEYS
                 if isinstance(context, Mapping) and key in context
             }
-            parent_conn, child_conn = self._ctx.Pipe(duplex=False)
-            control = self._ctx.Queue()
-            stop_event = self._ctx.Event()
-            process = self._ctx.Process(
-                target=_child_entry,
-                args=(child_conn, control, stop_event, self.adapter, node, forwarded),
-                daemon=True,
-            )
-            reader = None
             try:
-                try:
+                with ExitStack() as cleanup:
+                    parent_conn, child_conn = self._ctx.Pipe(duplex=False)
+                    cleanup.callback(parent_conn.close)
+                    cleanup.callback(child_conn.close)
+                    control = self._ctx.Queue()
+                    cleanup.callback(control.close)
+                    stop_event = self._ctx.Event()
+                    reader = threading.Thread(
+                        target=self._drain, args=(control, context, stop_event), daemon=True
+                    )
+                    cleanup.callback(lambda: reader.join(timeout=1.0) if reader.ident is not None else None)
+                    process = self._ctx.Process(
+                        target=_child_entry,
+                        args=(child_conn, control, stop_event, self.adapter, node, forwarded),
+                        daemon=True,
+                    )
+                    cleanup.callback(self._reap, process)
+                    cleanup.callback(stop_event.set)
                     process.start()
-                except Exception as exc:
-                    raise AdapterFailure(f"isolated worker could not start: {exc}", kind="spawn") from exc
-                self._note("started")
-                child_conn.close()
-                reader = threading.Thread(
-                    target=self._drain, args=(control, context, stop_event), daemon=True
-                )
-                reader.start()
-                payload = self._await_result(parent_conn, process, stop_event, should_stop, hard_timeout)
-            finally:
-                stop_event.set()
-                try:
-                    self._reap(process)
-                finally:
-                    if reader is not None and reader.ident is not None:
-                        reader.join(timeout=1.0)
-                    for connection in (parent_conn, child_conn):
-                        try:
-                            connection.close()
-                        except OSError:
-                            pass
-                    try:
-                        control.close()
-                    except (OSError, ValueError):
-                        pass
+                    self._note("started")
+                    child_conn.close()
+                    reader.start()
+                    payload = self._await_result(parent_conn, process, stop_event, should_stop, hard_timeout)
+            except AdapterFailure:
+                raise
+            except Exception as exc:
+                raise AdapterFailure(f"isolated worker could not start or complete: {exc}", kind="spawn") from exc
             if not payload.get("ok"):
                 record = payload.get("adapter_call")
                 if isinstance(record, dict):
