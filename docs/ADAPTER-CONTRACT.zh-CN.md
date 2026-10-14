@@ -102,6 +102,7 @@ adapter = HttpWorkerAdapter(
 - 失败抛出 `AdapterFailure`，带 `kind`（`transport`/`http`/`sse`/`usage`/`output-limit`/`response-size`/`content-type`/`empty-output`/`empty-answer`/`cancelled`）和 `retryable`；调度器当前仍按 `max_attempts` 重试任何异常，尚未按 kind 分流；
 - 调用记录 `adapter.calls` 只保存 node id、状态、usage、事件数、输出 sha256 和耗时，不保存 prompt 正文与凭据；
 - 响应超过 `max_artifact_bytes` 时保存摘要与摘要哈希，不做静默截断，并在 envelope 的 `warnings` 中标注。
+- usage 可包含独立的 `cache_read_input_tokens`、`cache_creation_input_tokens`；与普通输入/输出一样必须为非负累计整数，跨起始/末尾帧保留。预算 total_tokens 为这四类计数之和，按现有配置的统一 token 单价结算，并非 provider 的分缓存价格账单。参见 [官方缓存计数说明](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)。
 - SSE 必须是合法 UTF-8/JSON 对象帧，text delta 必须是字符串；显式 `error`、重复消息起止与结束后的消息帧均失败，不能靠保留事件名绕过 fail-closed。
 - SSE 支持标准 LF/CRLF/CR、开头 UTF-8 BOM 与多行 data；只有空行终止的帧生效。usage 合并 `message_start.message.usage.input_tokens` 与 `message_delta.usage`（累计值覆盖而不相加），最终仍必须有完整、合法的输入/输出计数。参见 [SSE 标准](https://html.spec.whatwg.org/multipage/server-sent-events.html) 与 [Messages 流协议](https://platform.claude.com/docs/en/build-with-claude/streaming)。
 - 每次已报告的输入/输出计数都必须是非负累计整数，不能回退；非法起始 usage 或晚到的 null/list usage 不能被其他有效帧覆盖或忽略。

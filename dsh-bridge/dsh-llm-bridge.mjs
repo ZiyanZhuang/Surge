@@ -189,11 +189,11 @@ export async function* streamToAnthropicSse(chunks, { model }) {
       continue;
     }
     if (chunk.type === 'usage') {
-      const input = chunk.usage?.inputTokens;
-      const output = chunk.usage?.outputTokens;
-      usage = Number.isSafeInteger(input) && input >= 0 && Number.isSafeInteger(output) && output >= 0
-        ? { input_tokens: input, output_tokens: output }
-        : null;
+      const counts = { input_tokens: chunk.usage?.inputTokens, output_tokens: chunk.usage?.outputTokens };
+      for (const [source, target] of [['cacheReadTokens', 'cache_read_input_tokens'], ['cacheWriteTokens', 'cache_creation_input_tokens']]) {
+        if (chunk.usage?.[source] !== undefined) counts[target] = chunk.usage[source];
+      }
+      usage = Object.values(counts).every((value) => Number.isSafeInteger(value) && value >= 0) ? counts : null;
       continue;
     }
     if (chunk.type === 'finish') {

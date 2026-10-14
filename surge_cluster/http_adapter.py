@@ -29,6 +29,7 @@ DEFAULT_SYSTEM_PROMPT = (
     "task and obey the requested output contract."
 )
 REQUIRED_SSE_EVENTS = ("message_start", "content_block_delta", "message_delta", "message_stop")
+_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
 # artifact 上限低于调度器 ArtifactStore 的 2 MB 默认值，为 JSON 包装留出余量。
 DEFAULT_MAX_ARTIFACT_BYTES = 1_900_000
 ARTIFACT_NAME = "model-response"
@@ -83,7 +84,7 @@ def _merge_usage(previous: Mapping[str, int], candidate: Any) -> dict[str, int]:
     if not isinstance(candidate, dict):
         raise AdapterFailure("adapter usage must be an object", kind="usage")
     merged = dict(previous)
-    for key in ("input_tokens", "output_tokens"):
+    for key in _USAGE_KEYS:
         if key not in candidate:
             continue
         value = candidate[key]
@@ -141,8 +142,7 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
             message = data.get("message")
             if isinstance(message, dict) and "usage" in message:
                 observed_usage = _merge_usage(observed_usage, message["usage"])
-                if "input_tokens" in observed_usage:
-                    start_usage = {"input_tokens": observed_usage["input_tokens"]}
+                start_usage = {key: value for key, value in observed_usage.items() if key != "output_tokens"}
         if event_name == "content_block_delta":
             delta = data.get("delta")
             if not isinstance(delta, dict):
@@ -154,7 +154,7 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
         if event_name == "message_delta" and "usage" in data:
             candidate = data["usage"]
             observed_usage = _merge_usage(observed_usage, candidate)
-            counts = {key: candidate[key] for key in ("input_tokens", "output_tokens") if key in candidate}
+            counts = {key: candidate[key] for key in _USAGE_KEYS if key in candidate}
             usage = {**(usage or start_usage), **counts}
     return "".join(output), usage, events
 
@@ -166,7 +166,9 @@ def require_usage(usage: Mapping[str, Any] | None, max_output_tokens: int) -> di
             "adapter SSE did not contain message_delta.usage", kind="usage", retryable=False
         )
     result: dict[str, int] = {}
-    for key in ("input_tokens", "output_tokens"):
+    for key in _USAGE_KEYS:
+        if key not in ("input_tokens", "output_tokens") and key not in usage:
+            continue
         value = usage.get(key)
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             raise AdapterFailure(
@@ -384,7 +386,7 @@ class HttpWorkerAdapter:
                 extra_headers=self.extra_headers,
             )
             usage = response["usage"]
-            total_tokens = usage["input_tokens"] + usage["output_tokens"]
+            total_tokens = sum(usage.values())
             completed = WorkerResult({"usage": {
                 "total_tokens": total_tokens,
                 "cost": total_tokens / 1000.0 * self.cost_per_1k_tokens,

@@ -213,6 +213,33 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, "succeeded")
         self.assertAlmostEqual(result.spent_cost, (10 + 75) / 1000.0 * 0.02, places=9)
 
+    def test_cache_input_tokens_are_counted_from_start_or_delta(self) -> None:
+        cache = {"cache_read_input_tokens": 100, "cache_creation_input_tokens": 20}
+        for location in ("start", "delta"):
+            with self.subTest(location=location):
+                payload = _sse()
+                if location == "start":
+                    payload = payload.replace(b'{"type":"message_start"}', json.dumps({"type": "message_start", "message": {"usage": cache}}).encode())
+                else:
+                    payload = payload.replace(b'{"input_tokens": 10, "output_tokens": 75}', json.dumps({"input_tokens": 10, "output_tokens": 75, **cache}).encode())
+                _FakeHandler.payload = payload
+                adapter = self._adapter()
+                result, _ = self._run(adapter)
+                self.assertEqual(result.status, "succeeded")
+                self.assertAlmostEqual(result.spent_cost, 205 / 1000 * adapter.cost_per_1k_tokens)
+                self.assertEqual(adapter.calls[-1]["usage"], {"input_tokens": 10, "output_tokens": 75, **cache})
+
+    def test_cache_usage_must_be_nonnegative_and_cumulative(self) -> None:
+        for value in (-1, False, "20", None):
+            with self.subTest(value=value):
+                _FakeHandler.payload = _sse().replace(b'{"input_tokens": 10, "output_tokens": 75}', json.dumps({"input_tokens": 10, "output_tokens": 75, "cache_read_input_tokens": value}).encode())
+                with self.assertRaises(AdapterFailure) as caught:
+                    self._adapter().run(NodeSpec("n", "work"), {})
+                self.assertEqual(caught.exception.kind, "usage")
+        _FakeHandler.payload = _sse().replace(b'{"type":"message_start"}', b'{"type":"message_start","message":{"usage":{"cache_read_input_tokens":100}}}').replace(b'{"input_tokens": 10, "output_tokens": 75}', b'{"input_tokens":10,"output_tokens":75,"cache_read_input_tokens":99}')
+        with self.assertRaises(AdapterFailure):
+            self._adapter().run(NodeSpec("n", "work"), {})
+
     def test_completed_response_rejections_retain_known_cost(self) -> None:
         def broken_extractor(_text):
             raise ValueError("cannot extract answer")

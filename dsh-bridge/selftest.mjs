@@ -263,6 +263,8 @@ async function main() {
           for (const chunk of chunks) yield chunk;
         })();
       }
+      if (options.model === 'cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: 100, cacheWriteTokens: 20 } })();
+      if (options.model === 'invalid-cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: -1 } })();
       if (options.model === 'no-usage-model') {
         return textStream({ usage: null })();
       }
@@ -316,6 +318,12 @@ async function main() {
   check('error finish emits an error event', errorNames.includes('error'), errorNames.join(','));
   check('error finish never emits message_stop', !errorNames.includes('message_stop'));
   check('error event carries the upstream code', /RATE_LIMIT/.test(errored));
+
+  const cached = await (await post(mappingUrl, token, { ...REQUEST, model: 'cache-model' })).text();
+  const cachedUsage = dataFrames(cached).find((item) => item.type === 'message_delta')?.usage;
+  check('disjoint cache input counts are preserved', JSON.stringify(cachedUsage) === '{"input_tokens":3,"output_tokens":2,"cache_read_input_tokens":100,"cache_creation_input_tokens":20}');
+  const invalidCache = await (await post(mappingUrl, token, { ...REQUEST, model: 'invalid-cache-model' })).text();
+  check('invalid cache counts cannot produce valid billed usage', dataFrames(invalidCache).find((item) => item.type === 'message_delta')?.usage === undefined);
 
   const noUsage = await (await post(mappingUrl, token, { ...REQUEST, model: 'no-usage-model' })).text();
   const noUsageDelta = dataFrames(noUsage).find((item) => item.type === 'message_delta');

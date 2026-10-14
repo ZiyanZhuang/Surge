@@ -28,7 +28,7 @@ fail-closed 规则。换一种自定义线协议会把那套校验逻辑复制�
 - `GenerateOptions`：`provider`、`model`、`messages`、`system?`、`maxTokens?`、`temperature?`、`signal?`
 - `messages` 接受 request-only 形式：`{role:'user', content:[{type:'text', text}]}`
 - chunk 类型：`block-start` / `text-delta` / `reasoning-delta` / `tool-call-delta` / `block-end` / `usage` / `finish`
-- `usage` 字段为 `inputTokens` / `outputTokens`；每个流恰好以一个 `finish` 结束
+- `usage` 的 `inputTokens` 是未缓存输入，`cacheReadTokens` / `cacheWriteTokens` 为可选的独立缓存计数；分别映射到 `input_tokens` / `cache_read_input_tokens` / `cache_creation_input_tokens`，输出为 `output_tokens`。参见 [上游类型定义](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/llm/llm/src/types.ts)。每个流恰好以一个 `finish` 结束
 
 ## 维持的不变量
 
