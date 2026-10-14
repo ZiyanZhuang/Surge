@@ -207,6 +207,21 @@ async function main() {
   check('rejection explains the limitation', /text only/.test(await imageBlock.text()));
   const noModel = await post(url, token, { messages: REQUEST.messages });
   check('missing model → 400', noModel.status === 400, `got ${noModel.status}`);
+  const callsBeforeInvalidOptions = upstreamCalls.length;
+  for (const [label, patch] of [
+    ['system array', { system: [] }], ['system null', { system: null }],
+    ['zero tokens', { max_tokens: 0 }], ['negative tokens', { max_tokens: -1 }],
+    ['fractional tokens', { max_tokens: 1.5 }], ['string tokens', { max_tokens: '10' }],
+    ['boolean tokens', { max_tokens: true }], ['null tokens', { max_tokens: null }],
+    ['unsafe tokens', { max_tokens: Number.MAX_SAFE_INTEGER + 1 }],
+    ['string temperature', { temperature: 'cold' }], ['null temperature', { temperature: null }],
+    ['non-streaming request', { stream: false }], ['invalid stream flag', { stream: 'true' }],
+  ]) {
+    const response = await post(url, token, { ...REQUEST, ...patch });
+    check(`invalid ${label} → 400`, response.status === 400, `got ${response.status}`);
+    await response.text();
+  }
+  check('invalid options never reached the model', upstreamCalls.length === callsBeforeInvalidOptions);
 
   // ---- reasoning, max-tokens, error, missing usage ----------------------
   console.log('chunk mapping');
@@ -385,6 +400,8 @@ async function main() {
     threw = true;
   }
   check('unsupported role is rejected', threw);
+  const zeroTemperature = buildGenerateOptions({ ...REQUEST, temperature: 0, max_tokens: 1, stream: true }, { provider: 'p' });
+  check('valid zero temperature and integer token limit are preserved', zeroTemperature.temperature === 0 && zeroTemperature.maxTokens === 1);
 
   await dispose(mappingBridge);
   rmSync(scratch, { recursive: true, force: true });

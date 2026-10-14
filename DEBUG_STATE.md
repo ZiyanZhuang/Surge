@@ -77,6 +77,7 @@
 | D53 | P1 | FinQA 继承调用者 Decimal 上下文，轨迹变化且 exe_ans 误匹配 | 已修复；舍入与低精度/指数环境两条反例先失败、全量 272 项通过 |
 | D54 | P2 | ModelVerifier 零/负数/非有限/错误类型配置被忽略或延迟到付费调用后失败 | 已修复；23 个非法配置先接受，构造时拒绝、全量 274 项通过 |
 | D55 | P2 | ModelVerifier.system_prompt 被保存但从未用于请求 | 已修复；自定义规则未到达 adapter 的反例先失败、全量 276 项通过 |
+| D56 | P1 | bridge 静默忽略/强转非法 system、token、temperature 与 stream 参数 | 已修复；13 种非法 HTTP 请求先误成功且调用模型、Node 57/57、Python 276 项通过 |
 
 文档中部分“未来工作”描述与已有 bridge/模型验证实现不一致，待代码与证据核对。
 
@@ -197,6 +198,8 @@
   - 完整回归：274/274（65.831 秒）；模型验证 31/31、Node 42/42、构建与发布验证通过。
 - D55：现有 system_prompt 参数传到 prompt builder，并作为验证任务规则前缀；JSON schema、任务、claim/evidence 结构保留。沿用 WorkerAdapter 的 task prompt，不新增角色传输协议；HTTP system 消息仍由下层 adapter 自行配置。回归确认自定义规则实际到达 adapter。
   - 完整回归：276/276（65.904 秒）；模型验证 32/32、验证 34/34、Node 42/42、构建与发布验证通过。
+- D56：显式请求参数按既有支持范围验证，非法 system 类型、非正/非安全整数 token、非法温度、非 true 的 stream 均 400 并在模型调用前停止。保留合法 temperature=0 与整数额度；环境配置的数字字符串解析不受此请求校验影响。正常 SSE golden 未变。
+  - 完整回归：276/276（65.772 秒）；Node 57/57、Python bridge 契约 5/5、构建与发布验证通过。
 
 ## 跨平台补验
 

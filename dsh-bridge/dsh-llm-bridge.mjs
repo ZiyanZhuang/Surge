@@ -103,12 +103,17 @@ export function buildGenerateOptions(body, { provider, signal }) {
     mapped.push({ role, content: blocks });
   }
   const options = { provider, model, messages: mapped, signal };
+  if (body.system !== undefined && typeof body.system !== 'string') throw new Error('system must be a string');
   if (typeof body.system === 'string' && body.system !== '') options.system = body.system;
-  const maxTokens = positiveInt(body.max_tokens, 0);
-  if (maxTokens > 0) options.maxTokens = maxTokens;
-  if (typeof body.temperature === 'number' && Number.isFinite(body.temperature)) {
+  if (body.max_tokens !== undefined) {
+    if (!Number.isSafeInteger(body.max_tokens) || body.max_tokens < 1) throw new Error('max_tokens must be a positive safe integer');
+    options.maxTokens = body.max_tokens;
+  }
+  if (body.temperature !== undefined) {
+    if (typeof body.temperature !== 'number' || !Number.isFinite(body.temperature)) throw new Error('temperature must be a finite number');
     options.temperature = body.temperature;
   }
+  if (body.stream !== undefined && body.stream !== true) throw new Error('only streaming requests are supported');
   return options;
 }
 
