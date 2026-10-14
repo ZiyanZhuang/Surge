@@ -80,6 +80,20 @@ def default_answer_extractor(text: str) -> str | None:
     return text.strip() or None
 
 
+def _merge_usage(previous: Mapping[str, int], candidate: Any) -> dict[str, int]:
+    if not isinstance(candidate, dict):
+        raise AdapterFailure("adapter usage must be an object", kind="usage")
+    merged = dict(previous)
+    for key in ("input_tokens", "output_tokens"):
+        if key not in candidate:
+            continue
+        value = candidate[key]
+        if isinstance(value, bool) or not isinstance(value, int) or value < merged.get(key, 0):
+            raise AdapterFailure(f"adapter usage.{key} must be a non-negative cumulative integer", kind="usage")
+        merged[key] = value
+    return merged
+
+
 def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
     """解析 SSE 负载，返回 (文本, usage, 事件名序列)。
 
@@ -94,6 +108,7 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
     output: list[str] = []
     usage: dict[str, Any] | None = None
     start_usage: dict[str, Any] = {}
+    observed_usage: dict[str, int] = {}
     for frame in text.split("\n\n")[:-1]:
         event_name = None
         data = None
@@ -125,9 +140,10 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
             continue
         if event_name == "message_start":
             message = data.get("message")
-            candidate = message.get("usage") if isinstance(message, dict) else None
-            if isinstance(candidate, dict) and "input_tokens" in candidate:
-                start_usage = {"input_tokens": candidate["input_tokens"]}
+            if isinstance(message, dict) and "usage" in message:
+                observed_usage = _merge_usage(observed_usage, message["usage"])
+                if "input_tokens" in observed_usage:
+                    start_usage = {"input_tokens": observed_usage["input_tokens"]}
         if event_name == "content_block_delta":
             delta = data.get("delta")
             if not isinstance(delta, dict):
@@ -136,10 +152,11 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
                 if not isinstance(delta.get("text"), str):
                     raise AdapterFailure("adapter SSE text delta must be a string", kind="sse")
                 output.append(delta["text"])
-        if event_name == "message_delta":
-            candidate = data.get("usage")
-            if isinstance(candidate, dict):
-                usage = {**(usage or start_usage), **candidate}
+        if event_name == "message_delta" and "usage" in data:
+            candidate = data["usage"]
+            observed_usage = _merge_usage(observed_usage, candidate)
+            counts = {key: candidate[key] for key in ("input_tokens", "output_tokens") if key in candidate}
+            usage = {**(usage or start_usage), **counts}
     return "".join(output), usage, events
 
 

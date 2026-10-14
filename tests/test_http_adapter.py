@@ -251,6 +251,25 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, "failed")
         self.assertEqual(adapter.calls[-1]["kind"], "usage")
 
+    def test_late_usage_cannot_decrease_or_discard_reported_counts(self) -> None:
+        stop = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
+        for usage in ({"output_tokens": 1}, [], None, {"input_tokens": False}):
+            with self.subTest(usage=usage):
+                update = ('event: message_delta\ndata: ' + json.dumps({"usage": usage}) + '\n\n').encode()
+                _FakeHandler.payload = _sse().replace(stop, update + stop)
+                with self.assertRaises(AdapterFailure) as caught:
+                    self._adapter().run(NodeSpec("n", "work"), {})
+                self.assertEqual(caught.exception.kind, "usage")
+
+    def test_invalid_start_usage_cannot_be_replaced_by_valid_final_usage(self) -> None:
+        _FakeHandler.payload = _sse().replace(
+            b'{"type":"message_start"}',
+            b'{"type":"message_start","message":{"usage":{"input_tokens":false,"output_tokens":0}}}',
+        )
+        with self.assertRaises(AdapterFailure) as caught:
+            self._adapter().run(NodeSpec("n", "work"), {})
+        self.assertEqual(caught.exception.kind, "usage")
+
     def test_output_above_request_fails_closed(self) -> None:
         _FakeHandler.payload = _sse(output_tokens=2001)
         adapter = self._adapter()

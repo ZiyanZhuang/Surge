@@ -95,6 +95,7 @@ adapter = HttpWorkerAdapter(
 - 响应超过 `max_artifact_bytes` 时保存摘要与摘要哈希，不做静默截断，并在 envelope 的 `warnings` 中标注。
 - SSE 必须是合法 UTF-8/JSON 对象帧，text delta 必须是字符串；显式 `error`、重复消息起止与结束后的消息帧均失败，不能靠保留事件名绕过 fail-closed。
 - SSE 支持标准 LF/CRLF/CR、开头 UTF-8 BOM 与多行 data；只有空行终止的帧生效。usage 合并 `message_start.message.usage.input_tokens` 与 `message_delta.usage`（累计值覆盖而不相加），最终仍必须有完整、合法的输入/输出计数。参见 [SSE 标准](https://html.spec.whatwg.org/multipage/server-sent-events.html) 与 [Messages 流协议](https://platform.claude.com/docs/en/build-with-claude/streaming)。
+- 每次已报告的输入/输出计数都必须是非负累计整数，不能回退；非法起始 usage 或晚到的 null/list usage 不能被其他有效帧覆盖或忽略。
 
 执行入口是 `dsh-surge-run`（`run_dag.py`）：读取 JSON 计划，`--dry-run` 离线校验，真实模式必须显式给出 `--endpoint`。`node.max_tokens` 在计划里表示单次调用的预算预留上限（输入+输出），报告会记录这一口径。
 

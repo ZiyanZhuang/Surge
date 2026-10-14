@@ -179,6 +179,17 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(report["result"]["status"], "succeeded")
 
+    def test_cli_rejects_decreasing_usage(self) -> None:
+        stop = b'event: message_stop\ndata: {"type":"message_stop"}\n\n'
+        update = b'event: message_delta\ndata: {"usage":{"output_tokens":0}}\n\n'
+        _FakeHandler.payload = _sse().replace(stop, update + stop)
+        mapping = _plan_mapping()
+        mapping["nodes"][0]["max_attempts"] = 1
+        self._write_plan(mapping)
+        code, report = self._run("--endpoint", self.url)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["adapter_calls"][0]["kind"], "usage")
+
     def test_duplicate_node_id_is_rejected(self) -> None:
         mapping = _plan_mapping()
         mapping["nodes"][1]["id"] = "scout"
