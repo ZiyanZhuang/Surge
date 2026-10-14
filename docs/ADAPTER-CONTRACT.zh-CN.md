@@ -130,6 +130,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 spawn 失败以 `AdapterFailure(kind="spawn")` 返回，不计入成功 started 统计；未启动的 process 不执行 join。父子管道与控制队列均走 finally 清理，即使 reap 失败仍尝试关闭 IPC。
 
+terminate/kill 抛出 OS 错误或有界等待后子进程仍存活时，隔离实例以 `kind="reap"` 失败并拒绝后续 worker；不能把逻辑槽位释放误当成物理进程已退出。调用者处理残留进程后再建立新实例。
+
 隔离边界同样要求返回 `WorkerResult`，且 `artifacts` 为字符串名称到字符串正文的 mapping；不会把非法 artifact 强转文本或把空列表当成空 mapping。
 
 `ModelVerifier` 只读取本次返回结果：原始 verdict 从该结果的 `model-response` artifact（若含完整 text）或 envelope.answer 获取；token/cost 来自该 envelope 的合法 usage，不读取共享 `last_response`/`calls[-1]`，也不重新按 adapter 单价估算已报告成本。缺失或非法 usage 失败。

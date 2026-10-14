@@ -142,6 +142,26 @@ class IsolationTests(unittest.TestCase):
         process.join.assert_not_called()
         control.close.assert_called_once()
         self.assertEqual(isolated.stats()["started"], 0)
+
+    def test_unreaped_process_prevents_further_worker_admission(self) -> None:
+        for kill_error in (False, True):
+            with self.subTest(kill_error=kill_error):
+                isolated = IsolatedAdapter(LocalEchoAdapter(), hard_timeout_grace=0, kill_grace=0.01)
+                process = mock.Mock()
+                process.pid = 123
+                process.is_alive.return_value = True
+                if kill_error:
+                    process.kill.side_effect = PermissionError("termination rejected")
+                with mock.patch.object(isolated._ctx, "Process", return_value=process) as factory:
+                    with self.assertRaises(AdapterFailure) as first:
+                        isolated.run(_node(timeout_seconds=0.01), {})
+                    self.assertEqual(first.exception.kind, "reap")
+                    with self.assertRaises(AdapterFailure) as second:
+                        isolated.run(_node(), {})
+                    self.assertEqual(second.exception.kind, "reap")
+                factory.assert_called_once()
+                process.terminate.assert_called()
+                process.kill.assert_called()
     def test_timeout_graces_require_finite_numbers(self) -> None:
         for field in ("hard_timeout_grace", "kill_grace"):
             for value in (True, float("nan"), float("inf"), float("-inf"), -1):

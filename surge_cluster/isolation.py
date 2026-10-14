@@ -174,6 +174,7 @@ class IsolatedAdapter:
         # I1：信号量按实例共享，复用同一实例即可获得进程级全局上限。
         self._slots = threading.BoundedSemaphore(max_processes)
         self._stats_lock = threading.Lock()
+        self._reap_failed = False
         self.started = 0
         self.timed_out = 0
         # 从子进程带回的逐次调用证据；字段与内层 adapter 的记录一致。
@@ -204,10 +205,17 @@ class IsolatedAdapter:
                 process.kill()
                 process.join(self.kill_grace)
             process.join(0.2)
-            if not process.is_alive():
-                process.close()
+            if process.is_alive():
+                with self._stats_lock:
+                    self._reap_failed = True
+                raise AdapterFailure(f"isolated worker {process.pid} could not be stopped; adapter refuses further workers", kind="reap")
+            process.close()
         except ValueError:
             return
+        except OSError as exc:
+            with self._stats_lock:
+                self._reap_failed = True
+            raise AdapterFailure(f"failed to reap isolated worker: {exc}", kind="reap") from exc
 
     def _drain(self, control: Any, context: Mapping[str, Any], stop_event: Any) -> None:
         heartbeat = context.get("heartbeat") if isinstance(context, Mapping) else None
@@ -276,6 +284,9 @@ class IsolatedAdapter:
         with self._slots:  # I1
             if callable(should_stop) and should_stop():
                 raise AdapterFailure("isolated adapter cancelled before spawn", kind="cancelled")
+            with self._stats_lock:
+                if self._reap_failed:
+                    raise AdapterFailure("isolated adapter has an unreaped worker; refusing further workers", kind="reap")
             forwarded = {
                 key: context[key]
                 for key in _FORWARDED_CONTEXT_KEYS
