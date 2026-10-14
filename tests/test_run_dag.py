@@ -119,7 +119,7 @@ class RunDagCliTests(unittest.TestCase):
     def test_invalid_numeric_options_have_the_same_usage_error_in_both_modes(self) -> None:
         self._write_plan()
         for mode in (("--dry-run",), ("--endpoint", self.url)):
-            for option, values in (("--timeout", ("nan", "inf", "-inf", "0")), ("--cost-per-1k-tokens", ("nan", "inf", "-inf", "-1"))):
+            for option, values in (("--timeout", ("nan", "inf", "-inf", "0", "1e400")), ("--cost-per-1k-tokens", ("nan", "inf", "-inf", "-1", "1e400"))):
                 for value in values:
                     with self.subTest(mode=mode, option=option, value=value):
                         code, report = self._run(*mode, f"{option}={value}")

@@ -286,7 +286,7 @@ class VerifyingAdapterWithModelVerifierTests(unittest.TestCase):
         self.assertAlmostEqual(result.envelope["usage"]["cost"], 0.0004 + 15 / 1000.0 * 0.01)
 
     def test_model_verification_cannot_launder_invalid_worker_usage(self) -> None:
-        for usage in (None, {}, {"total_tokens": "unknown", "cost": "unknown"}, {"total_tokens": -1, "cost": -0.0001}):
+        for usage in (None, {}, {"total_tokens": "unknown", "cost": "unknown"}, {"total_tokens": -1, "cost": -0.0001}, {"total_tokens": 10 ** 400, "cost": 0}):
             with self.subTest(usage=usage):
                 verdict = _VerdictAdapter('{"pass":true,"score":1,"issues":[]}')
                 inner = _WorkerAdapter(_envelope("42", CLAIM, usage=usage), {"notes": "42"})

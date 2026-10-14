@@ -32,13 +32,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import re
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Iterable, Mapping
 
-from .core import AdapterFailure, NodeSpec, WorkerResult, _is_artifact_ref
+from .core import AdapterFailure, NodeSpec, WorkerResult, _is_artifact_ref, _is_finite_number
 from .http_adapter import ARTIFACT_NAME
 
 _DIGITS = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
@@ -401,11 +400,7 @@ def _require_budget_usage(usage: Any) -> dict[str, Any]:
         raise AdapterFailure("worker result must report usage", kind="usage")
     for key in ("total_tokens", "cost"):
         value = usage.get(key)
-        try:
-            valid = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)) and value >= 0
-        except OverflowError:
-            valid = False
-        if not valid:
+        if not _is_finite_number(value) or value < 0:
             raise AdapterFailure(f"usage.{key} must be a finite non-negative number", kind="usage")
     return dict(usage)
 

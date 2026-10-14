@@ -818,6 +818,16 @@ class CoreTests(unittest.TestCase):
                     with self.assertRaises(KeyError):
                         scheduler.result(run.id)
 
+    def test_control_api_rejects_unrepresentable_numbers_as_value_errors(self):
+        with self.scheduler(self._run_dir()) as scheduler:
+            for operation in (
+                lambda: scheduler.heartbeat("missing", "n", "a", 10 ** 400),
+                lambda: scheduler.report_progress("missing", "n", "a", 10 ** 400),
+                lambda: scheduler.recover_stale("missing", now=10 ** 400),
+            ):
+                with self.subTest(operation=operation), self.assertRaises(ValueError):
+                    operation()
+
     def test_deep_dag_validation_does_not_use_the_python_call_stack(self):
         for cyclic in (False, True):
             with self.subTest(cyclic=cyclic):

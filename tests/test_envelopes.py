@@ -153,6 +153,18 @@ class EnvelopePersistenceTests(unittest.TestCase):
 
 
 class EnvelopeEncodingTests(unittest.TestCase):
+    def test_large_numeric_fields_return_validation_errors(self) -> None:
+        for field in ("confidence", "total_tokens", "cost"):
+            with self.subTest(field=field):
+                payload = _envelope("42")
+                if field == "confidence":
+                    payload[field] = 10 ** 400
+                else:
+                    payload["usage"][field] = 10 ** 400
+                report = validate_envelope(payload)
+                self.assertFalse(report.ok)
+                self.assertTrue(any(field in error for error in report.errors))
+
     def test_unrepresentable_envelopes_have_a_safe_failure_record(self) -> None:
         nested = []
         for _ in range(20000):

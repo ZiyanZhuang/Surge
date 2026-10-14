@@ -27,6 +27,13 @@ RUN_TERMINAL = {"succeeded", "failed", "cancelled"}
 DATABASE_SCHEMA_VERSION = 3
 
 
+def _is_finite_number(value: Any) -> bool:
+    try:
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+    except OverflowError:
+        return False
+
+
 @dataclass(frozen=True)
 class StagePolicy:
     """单个逻辑执行阶段的需求策略。
@@ -328,9 +335,7 @@ def validate_envelope(
                 errors.append(f"citations[{index}] must be a non-empty string")
     confidence = envelope.get("confidence")
     if (
-        not isinstance(confidence, (int, float))
-        or isinstance(confidence, bool)
-        or not math.isfinite(float(confidence))
+        not _is_finite_number(confidence)
         or not 0 <= confidence <= 1
     ):
         errors.append("confidence must be between 0 and 1")
@@ -348,18 +353,14 @@ def validate_envelope(
         total_tokens = usage.get("total_tokens")
         cost = usage.get("cost")
         if (
-            not isinstance(total_tokens, (int, float))
-            or isinstance(total_tokens, bool)
-            or not math.isfinite(float(total_tokens))
+            not _is_finite_number(total_tokens)
             or total_tokens < 0
         ):
             errors.append("usage.total_tokens must be a finite non-negative number")
         if cost is None:
             errors.append("usage.cost is required")
         elif (
-            not isinstance(cost, (int, float))
-            or isinstance(cost, bool)
-            or not math.isfinite(float(cost))
+            not _is_finite_number(cost)
             or cost < 0
         ):
             errors.append("usage.cost must be a finite non-negative number")
@@ -797,21 +798,16 @@ class DAGScheduler:
             raise ValueError("run id must be a portable identifier (<=100 UTF-8 bytes)")
         is_int = lambda value: isinstance(value, int) and not isinstance(value, bool) and -(2 ** 63) <= value <= 2 ** 63 - 1
 
-        def is_finite(value: Any) -> bool:
-            try:
-                return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
-            except OverflowError:
-                return False
         if not is_int(run.max_nodes) or run.max_nodes < 1 or len(nodes) > run.max_nodes:
             raise ValueError(f"DAG exceeds max_nodes={run.max_nodes}")
         if (
-            not is_finite(run.budget_cost)
+            not _is_finite_number(run.budget_cost)
             or run.budget_cost < 0
             or not is_int(run.max_workers)
             or run.max_workers < 1
-            or not is_finite(run.deadline_seconds)
+            or not _is_finite_number(run.deadline_seconds)
             or run.deadline_seconds <= 0
-            or not is_finite(run.cost_per_1k_tokens)
+            or not _is_finite_number(run.cost_per_1k_tokens)
             or run.cost_per_1k_tokens < 0
         ):
             raise ValueError("invalid run budget, deadline, worker limit, or cost rate")
@@ -827,9 +823,9 @@ class DAGScheduler:
                 raise ValueError(f"node prompt must be text: {node.id}")
             if not is_int(node.wave) or node.wave < 0 or not is_int(node.priority):
                 raise ValueError(f"wave and priority must be integers: {node.id}")
-            if not is_int(node.max_attempts) or node.max_attempts < 1 or not is_finite(node.timeout_seconds) or node.timeout_seconds <= 0 or not is_int(node.max_tokens) or node.max_tokens < 1:
+            if not is_int(node.max_attempts) or node.max_attempts < 1 or not _is_finite_number(node.timeout_seconds) or node.timeout_seconds <= 0 or not is_int(node.max_tokens) or node.max_tokens < 1:
                 raise ValueError(f"invalid limits for node: {node.id}")
-            if not is_finite(node.incremental_value) or not is_finite(node.urgency):
+            if not _is_finite_number(node.incremental_value) or not _is_finite_number(node.urgency):
                 raise ValueError(f"non-finite node demand: {node.id}")
             if node.incremental_value < 0 or not 0 <= node.urgency <= 1:
                 raise ValueError(f"invalid demand values: {node.id}")
@@ -869,7 +865,7 @@ class DAGScheduler:
             if any(wave_by_id[dependency] > node.wave for dependency in node.depends_on):
                 raise ValueError(f"node {node.id} depends on a later wave")
 
-        if not is_finite(run.wave_success_threshold) or not 0 <= run.wave_success_threshold <= 1:
+        if not _is_finite_number(run.wave_success_threshold) or not 0 <= run.wave_success_threshold <= 1:
             raise ValueError("wave_success_threshold must be between 0 and 1")
         stage_names = [policy.name for policy in run.stage_policies]
         if any(not isinstance(name, str) or not name.strip() for name in stage_names):
@@ -879,7 +875,7 @@ class DAGScheduler:
         for policy in run.stage_policies:
             if not is_int(policy.max_in_flight) or policy.max_in_flight < 1 or not is_int(policy.dispatch_batch) or policy.dispatch_batch < 1:
                 raise ValueError(f"invalid stage limits: {policy.name}")
-            if not is_finite(policy.target_progress) or not is_finite(policy.quality_floor) or not 0 <= policy.target_progress <= 1 or not 0 <= policy.quality_floor <= 1:
+            if not _is_finite_number(policy.target_progress) or not _is_finite_number(policy.quality_floor) or not 0 <= policy.target_progress <= 1 or not 0 <= policy.quality_floor <= 1:
                 raise ValueError(f"invalid stage demand bounds: {policy.name}")
             if not isinstance(policy.defer_excess, bool):
                 raise ValueError(f"defer_excess must be bool: {policy.name}")
@@ -909,11 +905,11 @@ class DAGScheduler:
             if (
                 not is_int(profile.max_concurrency)
                 or profile.max_concurrency < 1
-                or not is_finite(profile.latency)
+                or not _is_finite_number(profile.latency)
                 or profile.latency <= 0
-                or not is_finite(profile.cost_per_1k_tokens)
+                or not _is_finite_number(profile.cost_per_1k_tokens)
                 or profile.cost_per_1k_tokens < 0
-                or not is_finite(profile.quality)
+                or not _is_finite_number(profile.quality)
                 or not isinstance(profile.route_classes, (tuple, list))
                 or any(not isinstance(item, str) or not item for item in profile.route_classes)
             ):
@@ -1248,10 +1244,10 @@ class DAGScheduler:
         if not isinstance(usage, Mapping):
             return 0.0
         cost = usage.get("cost")
-        if isinstance(cost, (int, float)) and not isinstance(cost, bool) and math.isfinite(float(cost)) and cost >= 0:
+        if _is_finite_number(cost) and cost >= 0:
             return float(cost)
         tokens = usage.get("total_tokens", 0)
-        if isinstance(tokens, (int, float)) and not isinstance(tokens, bool) and math.isfinite(float(tokens)) and tokens >= 0:
+        if _is_finite_number(tokens) and tokens >= 0:
             rate = run["cost_per_1k_tokens"] if cost_per_1k_tokens is None else cost_per_1k_tokens
             return float(tokens) / 1000.0 * rate
         return float("inf")
@@ -1259,9 +1255,7 @@ class DAGScheduler:
     def heartbeat(self, run_id: str, node_id: str, attempt_id: str, lease_seconds: float) -> bool:
         """Extend one active lease; adapters may call this during long work."""
         if (
-            isinstance(lease_seconds, bool)
-            or not isinstance(lease_seconds, (int, float))
-            or not math.isfinite(float(lease_seconds))
+            not _is_finite_number(lease_seconds)
             or lease_seconds <= 0
         ):
             raise ValueError("lease_seconds must be a finite positive number")
@@ -1295,9 +1289,7 @@ class DAGScheduler:
     ) -> bool:
         """Record monotonic worker progress without blocking the worker on callbacks."""
         if (
-            isinstance(progress, bool)
-            or not isinstance(progress, (int, float))
-            or not math.isfinite(float(progress))
+            not _is_finite_number(progress)
             or not 0.0 <= progress <= 1.0
         ):
             raise ValueError("progress must be a finite number between 0 and 1")
@@ -1344,7 +1336,7 @@ class DAGScheduler:
             raise TypeError("takeover must be a boolean")
         if owner_id is not None and (not isinstance(owner_id, str) or not owner_id):
             raise ValueError("owner_id must be a non-empty string")
-        if isinstance(now, bool) or not isinstance(now, (int, float)) or not math.isfinite(float(now)):
+        if not _is_finite_number(now):
             raise ValueError("now must be a finite timestamp")
         recovered: list[str] = []
         with self._lock, self._conn:

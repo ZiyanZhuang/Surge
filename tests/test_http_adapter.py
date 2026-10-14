@@ -379,7 +379,7 @@ class HttpAdapterTests(unittest.TestCase):
 
     def test_invalid_configuration_is_rejected(self) -> None:
         for name in ("timeout", "cost_per_1k_tokens"):
-            for value in (float("nan"), float("inf"), float("-inf")):
+            for value in (float("nan"), float("inf"), float("-inf"), 10 ** 400):
                 with self.subTest(name=name, value=value), self.assertRaises(ValueError):
                     HttpWorkerAdapter(self.url, "model", **{name: value})
         with self.assertRaises(ValueError):

@@ -6,6 +6,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -21,10 +22,18 @@ from surge_cluster import (
     WorkerResult,
     build_provenance,
 )
-from surge_cluster.verification import json_safe
+from surge_cluster.verification import ModelVerifier, json_safe
 
 
 class JsonSafetyTests(unittest.TestCase):
+    def test_unrepresentable_usage_fails_before_verifier_dispatch(self) -> None:
+        adapter = mock.Mock()
+        for key in ("total_tokens", "cost"):
+            envelope = {"usage": {"total_tokens": 1, "cost": 0, key: 10 ** 400}}
+            with self.subTest(key=key), self.assertRaises(AdapterFailure):
+                ModelVerifier(adapter).verify(NodeSpec("n", "work"), envelope, own_artifacts={"notes": "42"})
+        adapter.run.assert_not_called()
+
     def test_deep_values_produce_an_explicit_error(self) -> None:
         nested = []
         for _ in range(20000):

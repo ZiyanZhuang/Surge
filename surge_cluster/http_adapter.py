@@ -13,14 +13,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import re
 import time
 import urllib.error
 import urllib.request
 from typing import Any, Callable, Mapping
 
-from .core import AdapterFailure, NodeSpec, WorkerResult
+from .core import AdapterFailure, NodeSpec, WorkerResult, _is_finite_number
 
 DEFAULT_MAX_OUTPUT_TOKENS = 2000
 DEFAULT_MAX_RESPONSE_BYTES = 4_000_000
@@ -37,7 +36,7 @@ _NUMBER_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
 
 
 def _positive_number(value: Any, name: str, *, allow_zero: bool = False) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+    if not _is_finite_number(value):
         raise ValueError(f"{name} must be a finite number")
     if allow_zero:
         if value < 0:

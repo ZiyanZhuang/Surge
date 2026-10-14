@@ -248,7 +248,7 @@ class IsolationTests(unittest.TestCase):
                 process.kill.assert_called()
     def test_timeout_graces_require_finite_numbers(self) -> None:
         for field in ("hard_timeout_grace", "kill_grace"):
-            for value in (True, float("nan"), float("inf"), float("-inf"), -1):
+            for value in (True, float("nan"), float("inf"), float("-inf"), -1, 10 ** 400):
                 with self.subTest(field=field, value=value):
                     with self.assertRaisesRegex(ValueError, field):
                         IsolatedAdapter(LocalEchoAdapter(), **{field: value})

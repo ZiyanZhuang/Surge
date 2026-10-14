@@ -115,6 +115,8 @@ adapter = HttpWorkerAdapter(
 
 CLI 覆盖参数的错误属于 usage（退出码 2）：`--timeout` 必须有限且大于零，`--cost-per-1k-tokens` 必须有限且非负；dry-run 与真实模式执行相同检查。
 
+所有有限数值边界共用相同检查：布尔值、NaN、Infinity 与无法转换为有限 float 的超大整数均拒绝。envelope 返回验证错误，构造参数与 heartbeat/progress/recovery 参数返回 ValueError，不泄漏 float 转换的 OverflowError。
+
 ## 组合顺序：验证在外，隔离在内
 
 两个可选装饰器保持同一 `WorkerAdapter` 协议，因此可以和任何适配器组合：

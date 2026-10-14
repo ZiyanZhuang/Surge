@@ -10,12 +10,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from .core import NodeSpec, RunSpec
+from .core import NodeSpec, RunSpec, _is_finite_number
 
 PLAN_SCHEMA_VERSION = 1
 
@@ -88,11 +87,7 @@ def _string(value: Any, where: str) -> str:
 
 
 def _number(value: Any, where: str, *, positive: bool = False, allow_zero: bool = True) -> float:
-    try:
-        finite = not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(float(value))
-    except OverflowError:
-        finite = False
-    if not finite:
+    if not _is_finite_number(value):
         raise PlanError(f"{where} must be a finite number")
     if positive and value <= 0:
         raise PlanError(f"{where} must be positive")
