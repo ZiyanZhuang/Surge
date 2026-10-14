@@ -91,7 +91,7 @@ nodes = [
 ]
 ```
 
-`target_progress` 是按节点 `incremental_value` 加权的需求目标；`dispatch_batch` 是每次调度循环允许增加的数量；`max_in_flight` 是阶段硬并发上限。这样，任务进度和新增生产力需求共同决定下一批 Agent，而不是固定 64-way fan-out。Worker 可通过 `context["report_progress"](0..1, detail)` 写入单调的 `task.progress` 事件；调度器用已报告进度、已完成价值和运行中 reservation 重新计算阶段需求。
+`target_progress` 是按节点 `incremental_value` 加权的需求目标；`dispatch_batch` 是每次调度循环允许增加的数量；`max_in_flight` 是阶段硬并发上限。`defer_excess=False` 时继续执行阶段内全部节点，不因需求目标停止派发，仍遵守并发与批次限制。这样，任务进度和新增生产力需求共同决定下一批 Agent，而不是固定 64-way fan-out。Worker 可通过 `context["report_progress"](0..1, detail)` 写入单调的 `task.progress` 事件；调度器用已报告进度、已完成价值和运行中 reservation 重新计算阶段需求。
 
 ## 4. 并发与可靠性策略
 
