@@ -165,8 +165,25 @@ def _build_adapter(args: argparse.Namespace, run_spec: RunSpec):
     return adapter, meta
 
 
-def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path]:
+def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path | None]:
     args = _build_parser().parse_args(argv)
+    protected = [args.plan]
+    if args.workdir is not None:
+        protected.extend(args.workdir / name for name in ("run.sqlite3", "run.sqlite3-wal", "run.sqlite3-shm", "run.sqlite3-journal"))
+    try:
+        output_path = args.output.resolve()
+        conflict = any(
+            output_path == path.resolve()
+            or args.output.exists() and path.exists() and args.output.samefile(path)
+            for path in protected
+        )
+        if args.workdir is not None:
+            artifact_root = (args.workdir / "run-artifacts").resolve()
+            conflict = conflict or output_path == artifact_root or artifact_root in output_path.parents
+        if conflict:
+            return 2, _error_report("usage", "report output must not replace the plan or runtime state"), None
+    except (OSError, RuntimeError, ValueError) as exc:
+        return 2, _error_report("output", f"cannot validate report path: {exc}"), None
     if not args.dry_run and not args.endpoint:
         return 2, _error_report(
             "usage", "real mode requires --endpoint; use --dry-run for an offline plan validation"
@@ -253,14 +270,15 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path]:
 
 def main() -> int:
     code, report, output = run()
-    try:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        # newline="\n" 让报告在 Windows 上也保持 LF，便于跨平台 diff。
-        output.write_text(
-            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
-        )
-    except OSError as exc:
-        code, report = 2, _error_report("output", f"cannot write report: {exc}")
+    if output is not None:
+        try:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            # newline="\n" 让报告在 Windows 上也保持 LF，便于跨平台 diff。
+            output.write_text(
+                json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+            )
+        except OSError as exc:
+            code, report = 2, _error_report("output", f"cannot write report: {exc}")
     # stdout 使用 ASCII 转义，避免在 cp936/GBK 控制台或管道里被写成乱码字节。
     print(json.dumps(report, ensure_ascii=True, indent=2))
     return code

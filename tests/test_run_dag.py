@@ -12,6 +12,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -71,6 +72,45 @@ def _plan_mapping() -> dict[str, Any]:
 
 
 class RunDagCliTests(unittest.TestCase):
+    def test_main_cannot_overwrite_the_plan_or_its_hardlink(self) -> None:
+        for hardlink in (False, True):
+            with self.subTest(hardlink=hardlink):
+                self._write_plan()
+                before = self.plan.read_bytes()
+                output = self.plan
+                if hardlink:
+                    output = self.directory / "plan-link.json"
+                    output.hardlink_to(self.plan)
+                stdout = io.StringIO()
+                with mock.patch.object(sys, "argv", ["dsh-surge-run", "--plan", str(self.plan), "--output", str(output), "--dry-run"]), contextlib.redirect_stdout(stdout):
+                    code = run_dag.main()
+                self.assertEqual(self.plan.read_bytes(), before)
+                self.assertEqual(code, 2)
+                self.assertEqual(json.loads(stdout.getvalue())["error_kind"], "usage")
+
+    def test_main_cannot_write_reports_over_runtime_state(self) -> None:
+        self._write_plan()
+        for name in ("run.sqlite3", "run.sqlite3-wal", "run-artifacts/report.json"):
+            with self.subTest(name=name):
+                workdir = self.directory / ("runtime-" + name.replace("/", "-"))
+                output = workdir / name
+                stdout = io.StringIO()
+                with mock.patch.object(sys, "argv", ["dsh-surge-run", "--plan", str(self.plan), "--output", str(output), "--workdir", str(workdir), "--dry-run"]), contextlib.redirect_stdout(stdout):
+                    code = run_dag.main()
+                self.assertEqual(code, 2)
+                self.assertEqual(json.loads(stdout.getvalue())["error_kind"], "usage")
+                self.assertFalse(workdir.exists())
+
+    def test_report_json_can_live_next_to_persisted_state(self) -> None:
+        self._write_plan()
+        workdir = self.directory / "runtime"
+        output = workdir / "report.json"
+        with mock.patch.object(sys, "argv", ["dsh-surge-run", "--plan", str(self.plan), "--output", str(output), "--workdir", str(workdir), "--dry-run"]), contextlib.redirect_stdout(io.StringIO()):
+            code = run_dag.main()
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output.read_text(encoding="utf-8"))["result"]["status"], "succeeded")
+        self.assertTrue((workdir / "run.sqlite3").is_file())
+
     def setUp(self) -> None:
         _FakeHandler.payload = _sse()
         _FakeHandler.response_status = 200

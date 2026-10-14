@@ -14,6 +14,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+import run_dag
+
 from surge_cluster import (
     AdapterFailure,
     DAGScheduler,
@@ -75,6 +77,18 @@ def _sse(
 
 
 class HttpAdapterTests(unittest.TestCase):
+    def test_cli_rejects_unsafe_report_before_http_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            plan = Path(directory) / "plan.json"
+            plan.write_text(json.dumps({"schema_version": 1, "run": {"id": "safe-output"}, "nodes": [{"id": "n", "prompt": "work"}]}), encoding="utf-8")
+            original = plan.read_bytes()
+            code, report, output = run_dag.run(["--plan", str(plan), "--output", str(plan), "--endpoint", self.url])
+            self.assertEqual(code, 2)
+            self.assertEqual(report["error_kind"], "usage")
+            self.assertIsNone(output)
+            self.assertEqual(plan.read_bytes(), original)
+        self.assertEqual(_FakeHandler.request_count, 0)
+
     def setUp(self) -> None:
         _FakeHandler.payload = _sse()
         _FakeHandler.response_status = 200
