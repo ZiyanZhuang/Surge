@@ -4,10 +4,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from surge_cluster.finqa import check_oracle, compare_answer, execute_program
+from surge_cluster.finqa import check_oracle, compare_answer, execute_program, number
 
 
 class FinQAOracleTests(unittest.TestCase):
+    def test_program_results_and_float_labels_accept_scientific_notation(self):
+        trace = execute_program("divide(1, 100000000)")
+        self.assertTrue(check_oracle(trace["value"], {"answer": "0.00000001", "exe_ans": 1e-8})["ok"])
+        self.assertTrue(compare_answer("1E-8", "0.00000001")["ok"])
+
+    def test_scientific_numbers_still_enforce_finite_replay_bounds(self):
+        for value in ("1e101", "-1e101", "1e999999999999999999999999", "NaN", "Infinity", "1e+bad"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                number(value)
+
     def test_replays_arithmetic_trace_without_eval(self):
         trace = execute_program("add(40, 60), divide(#0, 4)")
         self.assertEqual(trace["value"], "25")

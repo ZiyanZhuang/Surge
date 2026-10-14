@@ -12,7 +12,7 @@ from decimal import Decimal, DecimalException, localcontext
 from typing import Any, Mapping
 
 
-NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+NUMBER = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
 STEP = re.compile(r"([a-z_]+)\(\s*([^(),]+?)\s*,\s*([^(),]+?)\s*\)")
 OPS = {"add", "subtract", "multiply", "divide", "exp"}
 
@@ -28,8 +28,11 @@ def number(value: Any) -> Decimal:
         text = "-" + text[1:-1]
     if len(text) > 100 or not re.fullmatch(NUMBER, text):
         raise ValueError(f"unsupported numeric value: {value!r}")
-    result = Decimal(text)
-    if not result.is_finite() or abs(result) > Decimal("1e100"):
+    try:
+        result = Decimal(text)
+    except DecimalException as exc:
+        raise ValueError(f"unsupported numeric value: {value!r}") from exc
+    if not result.is_finite() or result.copy_abs() > Decimal("1e100"):
         raise ValueError("numeric value exceeds replay bound")
     return result
 
@@ -122,7 +125,7 @@ def compare_answer(computed: str | None, answer: Any) -> dict[str, Any]:
             "tolerance": str(tolerance),
             "percent_mode": mode,
         }
-    except ValueError as exc:
+    except (ValueError, DecimalException) as exc:
         return {"ok": False, "error": str(exc)}
 
 
