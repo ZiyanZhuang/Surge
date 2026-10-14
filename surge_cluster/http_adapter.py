@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -45,6 +46,12 @@ def _positive_number(value: Any, name: str, *, allow_zero: bool = False) -> floa
     elif value <= 0:
         raise ValueError(f"{name} must be positive")
     return float(value)
+
+
+def _positive_integer(value: Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1 or not _is_finite_number(value):
+        raise ValueError(f"{name} must be a finite positive integer")
+    return value
 
 
 def extract_json_answer(text: str) -> str | None:
@@ -204,8 +211,10 @@ def call_messages_endpoint(
     中继进程或环境变量持有，不要写入任务计划或命令行历史。
     """
     _positive_number(timeout, "timeout")
-    _positive_number(max_output_tokens, "max_output_tokens")
-    _positive_number(max_response_bytes, "max_response_bytes")
+    _positive_integer(max_output_tokens, "max_output_tokens")
+    _positive_integer(max_response_bytes, "max_response_bytes")
+    if max_response_bytes >= sys.maxsize:
+        raise ValueError("max_response_bytes must leave room for a native read overflow byte")
     if not isinstance(url, str) or not url.startswith(("http://", "https://")):
         raise ValueError("url must be an http(s) endpoint")
     if not isinstance(model, str) or not model:
@@ -336,9 +345,11 @@ class HttpWorkerAdapter:
         self.model = model
         self.timeout = _positive_number(timeout, "timeout")
         self.system_prompt = system_prompt
-        self.max_output_tokens = int(_positive_number(max_output_tokens, "max_output_tokens"))
-        self.max_response_bytes = int(_positive_number(max_response_bytes, "max_response_bytes"))
-        self.max_artifact_bytes = int(_positive_number(max_artifact_bytes, "max_artifact_bytes"))
+        self.max_output_tokens = _positive_integer(max_output_tokens, "max_output_tokens")
+        self.max_response_bytes = _positive_integer(max_response_bytes, "max_response_bytes")
+        if self.max_response_bytes >= sys.maxsize:
+            raise ValueError("max_response_bytes must leave room for a native read overflow byte")
+        self.max_artifact_bytes = _positive_integer(max_artifact_bytes, "max_artifact_bytes")
         self.cost_per_1k_tokens = _positive_number(
             cost_per_1k_tokens, "cost_per_1k_tokens", allow_zero=True
         )

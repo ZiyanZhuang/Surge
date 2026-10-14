@@ -96,6 +96,7 @@ adapter = HttpWorkerAdapter(
 
 `HttpWorkerAdapter` 的行为约定：
 
+- HTTP token/response/artifact 上限要求正整数，不截断小数；response 上限必须小于 sys.maxsize，为读取时的一个超限检测字节留空间。非法配置在网络调用前拒绝。
 - 本次请求的 `max_tokens` 取 `min(max_output_tokens, node.max_tokens)`；provider 报告的 `output_tokens` 超过该值时 fail-closed；
 - 派发前检查 `should_stop()`，派发前与返回后都不在有取消信号时提交结果；
 - 调用前用 `heartbeat()` 把租约延长到 `min(node.timeout_seconds, timeout)`，保留亚秒上限，不强制抬到 1 秒；租约被拒即失败；

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import threading
 import time
@@ -14,6 +15,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import run_dag
 
@@ -24,6 +26,7 @@ from surge_cluster import (
     NodeSpec,
     RunSpec,
     extract_numeric_answer,
+    call_messages_endpoint,
 )
 
 
@@ -472,6 +475,22 @@ class HttpAdapterTests(unittest.TestCase):
         adapter.run(node, {"heartbeat": lambda _lease: True})
         self.assertEqual(adapter.calls[0]["node_id"], "solver")
         self.assertNotIn("SECRET-PROMPT-TEXT", json.dumps(adapter.calls))
+
+    def test_size_and_token_limits_require_positive_integers(self) -> None:
+        for name in ("max_output_tokens", "max_response_bytes", "max_artifact_bytes"):
+            for value in (0.5, 1.5, 2.0, True, "2", 10 ** 400):
+                with self.subTest(name=name, value=value), self.assertRaises(ValueError):
+                    self._adapter(**{name: value})
+        for value in (sys.maxsize, 10 ** 100):
+            with self.subTest(response_bytes=value), self.assertRaises(ValueError):
+                self._adapter(max_response_bytes=value)
+
+    def test_endpoint_limits_fail_before_network_dispatch(self) -> None:
+        for name, value in (("max_output_tokens", 0.5), ("max_output_tokens", 1.5), ("max_response_bytes", 0.5), ("max_response_bytes", sys.maxsize)):
+            with self.subTest(name=name, value=value), mock.patch("surge_cluster.http_adapter.urllib.request.urlopen") as urlopen:
+                with self.assertRaises(ValueError):
+                    call_messages_endpoint(self.url, "model", "work", 1.0, **{name: value})
+                urlopen.assert_not_called()
 
     def test_invalid_configuration_is_rejected(self) -> None:
         for extractor in (False, object()):
