@@ -1,4 +1,5 @@
 import shutil
+import concurrent.futures
 import sqlite3
 import sys
 import threading
@@ -622,6 +623,29 @@ class CoreTests(unittest.TestCase):
                 thread.join(2.0)
             self.assertFalse(thread.is_alive())
             self.assertEqual(holder[0].status, "succeeded")
+
+    def test_stale_claim_cannot_restart_a_completed_run(self):
+        directory = self._run_dir()
+        db_path = directory / "run.sqlite3"
+        with DAGScheduler(db_path) as first, DAGScheduler(db_path) as second:
+            first.submit(RunSpec("claim-race"), [NodeSpec("n", "work")])
+            paused, release = threading.Event(), threading.Event()
+
+            def pause_claim(statement):
+                if "SET status='running', owner_id=" in statement:
+                    paused.set()
+                    release.wait(5)
+
+            second._conn.set_trace_callback(pause_claim)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(second.execute, CountingAdapter(), "claim-race")
+                try:
+                    self.assertTrue(paused.wait(2))
+                    self.assertEqual(first.execute(CountingAdapter(), "claim-race").status, "succeeded")
+                finally:
+                    release.set()
+                self.assertEqual(future.result(timeout=5).status, "succeeded")
+            self.assertEqual(len(first.events("claim-race", "run.completed")), 1)
 
     def test_execute_setup_failure_releases_owner_claim(self):
         directory = self._run_dir()

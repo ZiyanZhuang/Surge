@@ -1399,11 +1399,14 @@ class DAGScheduler:
                     """
                     UPDATE runs
                     SET status='running', owner_id=?, owner_lease_until=?
-                    WHERE id=? AND (owner_id IS NULL OR owner_id=? OR owner_lease_until<?)
+                    WHERE id=? AND status IN ('pending','running')
+                      AND (owner_id IS NULL OR owner_id=? OR owner_lease_until<?)
                     """,
                     (self._owner_id, now + 30.0, run_id, self._owner_id, now),
                 ).rowcount
                 if not claimed:
+                    if self._get_run(run_id)["status"] in RUN_TERMINAL:
+                        return self.result(run_id)
                     raise RuntimeError(f"run is already being executed: {run_id}")
             run = self._get_run(run_id)
             self._active_runs.add(run_id)

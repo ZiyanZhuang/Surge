@@ -105,6 +105,7 @@ nodes = [
 - Host 重启后调用 `recover_stale()` 回收过期 lease 并重新排队，因此语义是 **at-least-once**；adapter 必须具备幂等键意识，不能宣称 exactly-once。`recover_stale(owner_id=...)` 只有在调用者持有 run owner 或原 owner lease 已过期时才会回收未过期的旧 attempt；活跃的其他 owner 只能被自然过期 lease 触发回收。
 - 预算结算先释放当前 reservation，再从 `budget_cost - spent_cost - 其余 reserved_cost` 中扣除实际 usage；这样并发 reservation 也不会让“已花费 + 未完成预留”超过硬预算上限。
 - `succeeded`、`failed`、`cancelled` 是不可变 run 终态；重复 `execute()` 只读返回已有结果，不重复 claim 或写入完成事件。
+- 终态保护也在 SQLite claim 的条件 UPDATE 内检查；持有旧 pending/running 快照的其他连接不能重新认领刚结束的 run，竞争失败后只读返回终态结果。
 - Run deadline、节点 timeout、最大重试次数和输出大小共同构成停止条件；线程池只能协作式取消，不能强杀不合作的 Python 线程。节点超时会发出协作式停止信号，但保留旧 future 占用槽位直到自然结束，所以不合作 worker 可能阻塞重试直到 run deadline；到达 deadline 后调度器会 detach 迟到 future、完成 run 状态结算并返回，线程本身仍可能在后台继续。需要硬超时和严格物理并发时应使用进程隔离。
 - 同一 SQLite run 通过 owner lease 防止多个 scheduler 实例同时执行；这不是跨主机任务队列或完整分布式锁。
 
