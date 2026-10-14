@@ -289,6 +289,14 @@ async function main() {
           yield { type: 'finish', reason: { kind: 'stop' } };
         })();
       }
+      if (['tool-response-model', 'tool-finish-only-model'].includes(options.model)) {
+        return (async function* () {
+          yield { type: 'text-delta', index: 0, text: 'I will use a tool' };
+          if (options.model === 'tool-response-model') yield { type: 'tool-call-delta', index: 1, id: 'call-1', name: 'lookup', argumentsDelta: '{"x":1}' };
+          yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 1 } };
+          yield { type: 'finish', reason: { kind: 'tool-calls' } };
+        })();
+      }
       if (options.model === 'cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: 100, cacheWriteTokens: 20 } })();
       if (options.model === 'invalid-cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: -1 } })();
       if (options.model === 'no-usage-model') {
@@ -375,6 +383,11 @@ async function main() {
   const growingUsage = await (await post(mappingUrl, token, { ...REQUEST, model: 'usage-increase-model' })).text();
   const finalGrowingUsage = dataFrames(growingUsage).find((item) => item.type === 'message_delta')?.usage;
   check('increasing usage preserves previously reported cache input', eventNames(growingUsage).includes('message_stop') && finalGrowingUsage?.cache_read_input_tokens === 10 && finalGrowingUsage?.output_tokens === 6);
+
+  for (const model of ['tool-response-model', 'tool-finish-only-model']) {
+    const unsupported = await (await post(mappingUrl, token, { ...REQUEST, model })).text();
+    check(`${model} cannot become a completed text answer`, eventNames(unsupported).includes('error') && !eventNames(unsupported).includes('message_stop'));
+  }
 
   // ---- cancellation -----------------------------------------------------
   console.log('cancellation');

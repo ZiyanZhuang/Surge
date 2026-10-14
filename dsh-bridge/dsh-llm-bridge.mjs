@@ -70,7 +70,6 @@ function upstreamFailureText(reason) {
 function stopReason(reason) {
   const kind = reason && typeof reason === 'object' ? reason.kind : undefined;
   if (kind === 'max-tokens') return 'max_tokens';
-  if (kind === 'tool-calls') return 'tool_use';
   if (kind === 'stop') return 'end_turn';
   return 'end_turn';
 }
@@ -173,22 +172,7 @@ export async function* streamToAnthropicSse(chunks, { model }) {
       });
       continue;
     }
-    if (chunk.type === 'tool-call-delta') {
-      if (open === null) {
-        open = index++;
-        yield frame('content_block_start', {
-          type: 'content_block_start',
-          index: open,
-          content_block: { type: 'tool_use', id: String(chunk.id ?? 'tool'), name: String(chunk.name ?? ''), input: {} },
-        });
-      }
-      yield frame('content_block_delta', {
-        type: 'content_block_delta',
-        index: open,
-        delta: { type: 'input_json_delta', partial_json: String(chunk.argumentsDelta ?? '') },
-      });
-      continue;
-    }
+    if (chunk.type === 'tool-call-delta') throw new Error('tool calls are not supported by this text-only bridge');
     if (chunk.type === 'usage') {
       const counts = { ...usage, input_tokens: chunk.usage?.inputTokens, output_tokens: chunk.usage?.outputTokens };
       for (const [source, target] of [['cacheReadTokens', 'cache_read_input_tokens'], ['cacheWriteTokens', 'cache_creation_input_tokens']]) {
@@ -216,6 +200,10 @@ export async function* streamToAnthropicSse(chunks, { model }) {
   }
   if (kind === 'error' || kind === 'aborted') {
     yield frame('error', { type: 'error', error: { type: kind, message: upstreamFailureText(finish) } });
+    return;
+  }
+  if (kind === 'tool-calls') {
+    yield frame('error', { type: 'error', error: { type: 'unsupported_output', message: 'tool calls are not supported by this text-only bridge' } });
     return;
   }
   yield* closeOpen();
