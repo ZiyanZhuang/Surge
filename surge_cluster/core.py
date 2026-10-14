@@ -564,6 +564,10 @@ class DAGScheduler:
                 self._conn.close()
 
     def _init_db(self) -> None:
+        self._conn.execute("BEGIN IMMEDIATE")
+        version = self._conn.execute("PRAGMA user_version").fetchone()[0]
+        if not 0 <= version <= DATABASE_SCHEMA_VERSION:
+            raise ValueError(f"unsupported database schema version {version}; supported up to {DATABASE_SCHEMA_VERSION}")
         artifact_info = list(self._conn.execute("PRAGMA table_info(artifacts)"))
         artifact_columns = {row[1] for row in artifact_info}
         expected_artifact_pk = ["run_id", "node_id", "name"]
@@ -579,9 +583,7 @@ class DAGScheduler:
                 has_conflicts = self._conn.execute("SELECT 1 FROM artifacts GROUP BY run_id,node_id,name HAVING COUNT(*)>1 LIMIT 1").fetchone()
                 if has_nulls or has_conflicts:
                     raise ValueError("legacy artifacts have null fields or conflicting bindings; manual migration required")
-        with self._conn:
-            self._conn.executescript(
-                """
+        schema = """
                 CREATE TABLE IF NOT EXISTS runs (
                     id TEXT PRIMARY KEY,
                     status TEXT NOT NULL,
@@ -662,18 +664,19 @@ class DAGScheduler:
                     created_at REAL NOT NULL
                 );
                 """
-            )
+        # executescript 会先提交已有事务；逐条执行固定建表语句以保留版本检查的写锁。
+        for statement in schema.split(";"):
+            if statement.strip():
+                self._conn.execute(statement)
 
-        # 迁移必须串行且处于同一 SQLite 事务；BEGIN IMMEDIATE 也避免两个 Host
-        # 同时重命名 artifacts 时互相看到半成品。SQLite DDL 在事务回滚时可恢复。
-        self._conn.execute("BEGIN IMMEDIATE")
+        # 建表和迁移共享 BEGIN IMMEDIATE；失败时由构造器关闭连接并完整回滚。
         # 旧版本把 ref 设为全局主键，会导致相同内容覆盖其他 run 的 artifact 绑定。
         # 这里迁移为“每个 run/node/name 一条绑定”，文件内容仍由 digest 寻址。
         artifact_info = list(self._conn.execute("PRAGMA table_info(artifacts)"))
         artifact_columns = {row[1] for row in artifact_info}
         artifact_pk = [row[1] for row in artifact_info if row[5]]
         if artifact_pk != expected_artifact_pk or not required_artifact_columns.issubset(artifact_columns):
-            # 预检查与写锁之间可能有旧客户端插入，不能用空表假设丢弃未知列。
+            # 非空的未知结构不能重建；绑定之外的正文或元数据也必须保留。
             if artifact_columns != required_artifact_columns and self._conn.execute("SELECT 1 FROM artifacts LIMIT 1").fetchone():
                 raise ValueError("legacy artifacts have unknown or missing binding columns; manual migration required")
             self._conn.execute("DROP INDEX IF EXISTS idx_artifacts_node")

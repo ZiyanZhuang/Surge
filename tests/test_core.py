@@ -419,6 +419,46 @@ class CoreTests(unittest.TestCase):
         self.assertIsNotNone(error)
         self.assertIn("schema version", error)
 
+    def test_schema_version_is_rechecked_under_the_migration_write_lock(self):
+        real_connect = sqlite3.connect
+        for barrier in ("PRAGMA busy_timeout=5000", "BEGIN IMMEDIATE"):
+            for version in (-1, 99):
+                with self.subTest(barrier=barrier, version=version):
+                    db = self._run_dir() / "schema-race.sqlite3"
+                    upgraded = False
+                    before = None
+
+                    def interleaved_connect(*args, **kwargs):
+                        connection = real_connect(*args, **kwargs)
+
+                        def upgrade_before_write(statement):
+                            nonlocal upgraded, before
+                            if statement == barrier and not upgraded:
+                                with closing(real_connect(db)) as writer, writer:
+                                    writer.execute("BEGIN IMMEDIATE")
+                                    writer.execute(f"PRAGMA user_version={version}")
+                                    writer.execute("CREATE TABLE future_metadata(value TEXT)")
+                                    writer.execute("INSERT INTO future_metadata VALUES('preserve future state')")
+                                    before = tuple(writer.iterdump())
+                                upgraded = True
+
+                        connection.set_trace_callback(upgrade_before_write)
+                        return connection
+
+                    error = None
+                    with mock.patch("surge_cluster.core.sqlite3.connect", side_effect=interleaved_connect):
+                        try:
+                            with DAGScheduler(db):
+                                pass
+                        except ValueError as exc:
+                            error = str(exc)
+                    self.assertTrue(upgraded)
+                    with closing(real_connect(db)) as reader:
+                        self.assertEqual(reader.execute("PRAGMA user_version").fetchone()[0], version)
+                        self.assertEqual(tuple(reader.iterdump()), before, "initializer changed a concurrently upgraded schema")
+                    self.assertIsNotNone(error)
+                    self.assertIn("schema version", error)
+
     def test_very_old_schema_migrates_all_runtime_tables(self):
         directory = self._run_dir()
         db_path = Path(directory) / "very-old.sqlite3"
