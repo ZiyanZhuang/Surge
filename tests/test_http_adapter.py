@@ -160,6 +160,11 @@ class HttpAdapterTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(extract_numeric_answer(text), "-42")
 
+    def test_numeric_extraction_keeps_grouped_and_fractional_literals_whole(self) -> None:
+        for literal in ("1,234.50", "-1,234,567", "-.5", ".5", "-1,234.5e-2%"):
+            with self.subTest(literal=literal):
+                self.assertEqual(extract_numeric_answer("The answer is " + literal), literal)
+
     def test_explicit_falsey_answer_extractor_is_not_replaced(self) -> None:
         class EmptyExtractor:
             called = False

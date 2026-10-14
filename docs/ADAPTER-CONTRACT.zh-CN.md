@@ -196,3 +196,5 @@ provenance 名称解析与调度器保持当前节点名称优先；依赖限定
 | `budget_snapshot(run_id)` | `spent + reserved <= budget` 不变量的对外快照与账本汇总 |
 
 adapter 在运行期还可以使用 `context["read_artifact"](ref)` 读取依赖证据；该回调只在父进程内可用。
+
+数值证据比较将合法逗号千分位视为完整数字，并用 Decimal 保留符号、小数与科学计数法；专用数值提取器也保留这些字面量及前导小数点。它不进行单位换算或科学语义验证。

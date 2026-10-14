@@ -206,6 +206,11 @@ class EvidenceVerifierTests(unittest.TestCase):
             ("\u221242", "the value is -42", True),
             ("-42", "the value is \u221242", True),
             ("1e3", "the value is 1000", True),
+            ("1,000", "the values are 1 and 0", False),
+            ("1000", "the value is 1,000", True),
+            ("1,000", "the value is 1000", True),
+            ("\u22121,000", "the value is -1000", True),
+            ("1,234.5e-2", "the value is 12.345", True),
             ("93.50", "the value is 93.5", True),
             ("1e999999999999999999999999", "the value is 42", False),
         ):

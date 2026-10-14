@@ -40,7 +40,7 @@ from typing import Any, Callable, Iterable, Mapping
 from .core import AdapterFailure, NodeSpec, WorkerResult, _is_artifact_ref, _is_finite_number
 from .http_adapter import ARTIFACT_NAME
 
-_DIGITS = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
+_DIGITS = re.compile(r"[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
 _FENCE = re.compile(r"^```[a-zA-Z0-9_-]*\s*|\s*```$")
 
 
@@ -80,7 +80,7 @@ def resolve_evidence(
 
 def _numbers(text: str) -> set[Decimal]:
     """保留符号并精确比较十进制与科学计数法，不引入浮点舍入。"""
-    return {Decimal(raw) for raw in _DIGITS.findall(text.replace("\u2212", "-"))}
+    return {Decimal(raw.replace(",", "")) for raw in _DIGITS.findall(text.replace("\u2212", "-"))}
 
 
 @dataclass(frozen=True)

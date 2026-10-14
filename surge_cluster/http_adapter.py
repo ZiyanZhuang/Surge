@@ -34,7 +34,7 @@ _USAGE_KEYS = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cach
 # artifact 上限低于调度器 ArtifactStore 的 2 MB 默认值，为 JSON 包装留出余量。
 DEFAULT_MAX_ARTIFACT_BYTES = 1_900_000
 ARTIFACT_NAME = "model-response"
-_NUMBER_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
+_NUMBER_RE = re.compile(r"[-+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?%?")
 
 
 def _positive_number(value: Any, name: str, *, allow_zero: bool = False) -> float:
