@@ -467,6 +467,41 @@ class CoreTests(unittest.TestCase):
                 self.assertIsNotNone(error)
                 self.assertIn("artifact", error)
 
+    def test_legacy_artifact_migration_rechecks_rows_under_its_write_lock(self):
+        db = self._run_dir() / "legacy-race.sqlite3"
+        real_connect = sqlite3.connect
+        with closing(real_connect(db)) as writer, writer:
+            writer.execute("CREATE TABLE artifacts(opaque_payload TEXT)")
+        inserted = False
+
+        def connect_with_interleaved_writer(*args, **kwargs):
+            connection = real_connect(*args, **kwargs)
+
+            def insert_before_migration(statement):
+                nonlocal inserted
+                if statement == "BEGIN IMMEDIATE" and not inserted:
+                    with closing(real_connect(db)) as writer, writer:
+                        writer.execute("INSERT INTO artifacts VALUES(?)", ("must preserve opaque payload",))
+                    inserted = True
+
+            connection.set_trace_callback(insert_before_migration)
+            return connection
+
+        error = None
+        with mock.patch("surge_cluster.core.sqlite3.connect", side_effect=connect_with_interleaved_writer):
+            try:
+                with DAGScheduler(db):
+                    pass
+            except ValueError as exc:
+                error = str(exc)
+        self.assertTrue(inserted)
+        with closing(real_connect(db)) as reader:
+            columns = {row[1] for row in reader.execute("PRAGMA table_info(artifacts)")}
+            self.assertEqual(columns, {"opaque_payload"}, "migration dropped a concurrently inserted payload")
+            self.assertEqual(reader.execute("SELECT opaque_payload FROM artifacts").fetchall(), [("must preserve opaque payload",)])
+        self.assertIsNotNone(error)
+        self.assertIn("legacy artifacts", error)
+
     def test_unambiguous_legacy_artifact_bindings_are_preserved(self):
         db = self._run_dir() / "legacy-artifacts.sqlite3"
         records = [("r", "a", "notes", "ref-a", "path-a", "sha-a"), ("r", "b", "notes", "ref-b", "path-b", "sha-b")]

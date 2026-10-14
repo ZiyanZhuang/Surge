@@ -671,6 +671,9 @@ class DAGScheduler:
         # 这里迁移为“每个 run/node/name 一条绑定”，文件内容仍由 digest 寻址。
         artifact_info = list(self._conn.execute("PRAGMA table_info(artifacts)"))
         artifact_columns = {row[1] for row in artifact_info}
+        # 预检查与写锁之间可能有旧客户端插入，不能用空表假设丢弃未知列。
+        if not required_artifact_columns.issubset(artifact_columns) and self._conn.execute("SELECT 1 FROM artifacts LIMIT 1").fetchone():
+            raise ValueError("legacy artifacts lack binding columns; manual migration required")
         artifact_pk = [row[1] for row in artifact_info if row[5]]
         if artifact_pk != expected_artifact_pk or not required_artifact_columns.issubset(artifact_columns):
             self._conn.execute("DROP INDEX IF EXISTS idx_artifacts_node")
