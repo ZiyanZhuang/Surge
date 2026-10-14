@@ -233,7 +233,7 @@ function readBody(req) {
       }
       parts.push(chunk);
     });
-    req.on('end', () => resolve(Buffer.concat(parts).toString('utf8')));
+    req.on('end', () => resolve(Buffer.concat(parts)));
     req.on('error', reject);
   });
 }
@@ -291,16 +291,16 @@ export function apply(ctx, config = {}) {
       sendJson(res, 401, { error: 'invalid api key' });
       return;
     }
-    let bodyText;
+    let bodyBytes;
     try {
-      bodyText = await readBody(req);
+      bodyBytes = await readBody(req);
     } catch (error) {
       sendJson(res, 413, { error: String(error && error.message) });
       return;
     }
     let body;
     try {
-      body = JSON.parse(bodyText);
+      body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bodyBytes));
     } catch {
       sendJson(res, 400, { error: 'request body must be JSON' });
       return;

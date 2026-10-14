@@ -223,6 +223,21 @@ async function main() {
   }
   check('invalid options never reached the model', upstreamCalls.length === callsBeforeInvalidOptions);
 
+  const utf8CallsBefore = upstreamCalls.length;
+  const malformedBody = Buffer.concat([
+    Buffer.from(JSON.stringify(REQUEST).replace('say hello', 'UTF8_MARKER').split('UTF8_MARKER')[0]),
+    Buffer.from([0xff]),
+    Buffer.from(JSON.stringify(REQUEST).replace('say hello', 'UTF8_MARKER').split('UTF8_MARKER')[1]),
+  ]);
+  const invalidUtf8 = await fetch(url, {
+    method: 'POST', headers: { 'x-api-key': token }, body: malformedBody,
+  });
+  check('malformed UTF-8 body is rejected before model dispatch', invalidUtf8.status === 400 && upstreamCalls.length === utf8CallsBefore);
+  await invalidUtf8.text();
+  const validReplacement = await post(url, token, { ...REQUEST, system: '\uFFFD' });
+  await validReplacement.text();
+  check('valid Unicode replacement character is preserved', validReplacement.status === 200 && upstreamCalls.at(-1)?.system === '\uFFFD');
+
   // ---- reasoning, max-tokens, error, missing usage ----------------------
   console.log('chunk mapping');
   const chunks = [
