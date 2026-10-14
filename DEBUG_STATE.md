@@ -36,6 +36,7 @@
 | D12 | P1 | bridge 读取 body 前检查容量，慢上传并发完成可突破 maxConcurrent | 已修复；Node 36 项、全量 Python 193 项通过 |
 | D13 | P1 | bridge 为不完整上游流生成成功结束，且强转/伪造 usage | 已修复；Node 42 项、Python 契约 5 项及全量 193 项通过 |
 | D14 | P1 | 并发 ModelVerifier 串用共享最后响应，且可漏计/重估 verifier 成本 | 已修复；模型验证 22 项、全量 196 项通过 |
+| D15 | P1 | 验证失败/验证传输异常丢失已知用量，预算支出被记为零 | 已修复；模型验证 25 项、全量 200 项通过 |
 
 文档中部分“未来工作”描述与已有 bridge/模型验证实现不一致，待代码与证据核对。
 
@@ -70,6 +71,10 @@
   - 正常 Node 42/42；Python 193/193（45.060 秒）；golden 重建后契约通过，构建与发布验证通过。
 - D14：verdict 与 usage 绑定本次 WorkerResult，读取返回 artifact 原文而非共享 last_response/calls[-1]；使用 envelope 已报告成本，非法 usage fail-closed。修正测试 verifier fixture 使其按 WorkerAdapter 契约报告实际 usage；新增双线程 barrier、原始 verdict artifact 与非法 usage 回归。
   - 完整回归：196/196（45.087 秒）；Node 42/42、构建与发布验证通过。
+- D15：AdapterFailure 可携带已完成 WorkerResult；调度器按失败验证路径持久化/结算，保持有限重试、task.failed 事件和预算硬上限。VerifyingAdapter 透传已知 worker/verifier 用量，进程隔离保留失败结果。测试要求两次失败仍结算 0.0011，验证传输失败结算已知 worker 的 0.0004；未知 provider 用量不猜测。
+  - 同一事务内同步失败 attempt.cost 与账本；新增 SQLite 持久化金额断言，防止审计记录仍为零。
+  - 首轮全量 199 项出现已有 20ms timeout/retry 用例失败一次，最小重跑通过；保留记录，继续检查“完成时间与观察时间”竞争。补充 malformed claims 异常路径回归后重新全量。
+  - 最终全量 200/200（46.350 秒）；Node 42/42、构建与发布验证通过。
 
 ## 假设列表
 

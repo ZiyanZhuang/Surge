@@ -114,6 +114,12 @@ def _child_entry(
             "retryable": bool(getattr(exc, "retryable", False)),
             "traceback_tail": traceback.format_exc(limit=6)[-2000:],
         }
+        failed_result = getattr(exc, "result", None)
+        if isinstance(failed_result, WorkerResult):
+            try:
+                payload["result"] = _json_safe({"envelope": failed_result.envelope, "artifacts": failed_result.artifacts})
+            except (TypeError, ValueError):
+                pass
     # 内层 adapter 的逐次调用证据留在子进程里，这里把它带回父进程，避免隔离
     # 让报告失去可审计的调用明细。
     calls = getattr(adapter, "calls", None)
@@ -305,10 +311,13 @@ class IsolatedAdapter:
                 record = payload.get("adapter_call")
                 if isinstance(record, dict):
                     self.calls.append({**record, "node_id": record.get("node_id") or node.id})
+                failed = payload.get("result")
+                failed_result = WorkerResult(failed["envelope"], failed["artifacts"]) if isinstance(failed, dict) else None
                 raise AdapterFailure(
                     str(payload.get("error") or "isolated worker failed"),
                     kind=str(payload.get("kind") or "isolated"),
                     retryable=bool(payload.get("retryable")),
+                    result=failed_result,
                 )
             record = payload.get("adapter_call")
             if isinstance(record, dict):

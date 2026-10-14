@@ -60,6 +60,12 @@ class _NonSerializableAdapter:
         return WorkerResult(envelope={"answer": "x", "bad": float("nan")})
 
 
+class _PaidFailureAdapter:
+    def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
+        result = WorkerResult({"answer": "failed", "usage": {"total_tokens": 15, "cost": 0.25}})
+        raise AdapterFailure("paid verification failed", kind="verification", result=result)
+
+
 class _InvalidArtifactAdapter:
     def __init__(self, artifacts: Any):
         self.artifacts = artifacts
@@ -151,6 +157,12 @@ class IsolationTests(unittest.TestCase):
             isolated.run(_node(), {})
         self.assertEqual(caught.exception.kind, "content-type")
         self.assertFalse(caught.exception.retryable)
+
+    def test_inner_failure_preserves_its_completed_result(self) -> None:
+        with self.assertRaises(AdapterFailure) as caught:
+            IsolatedAdapter(_PaidFailureAdapter()).run(_node(), {})
+        self.assertEqual(caught.exception.kind, "verification")
+        self.assertEqual(caught.exception.result.envelope["usage"], {"total_tokens": 15, "cost": 0.25})
 
     def test_non_serializable_envelope_fails_inside_the_boundary(self) -> None:
         isolated = IsolatedAdapter(_NonSerializableAdapter())

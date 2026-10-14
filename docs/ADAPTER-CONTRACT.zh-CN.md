@@ -52,6 +52,7 @@ strict 模式下，`answer`、`claims`、`citations`、`confidence`、`warnings`
 ## 失败策略
 
 - Adapter 抛出异常：当前 attempt 失败；在 `max_attempts` 未耗尽时有限重试，否则节点为 `failed`，下游为 `blocked`；
+- 若异常为 `AdapterFailure(result=...)`，其中已完成的结果仍接受相同 envelope/预算校验并结算已报告用量，但绝不会提交为成功；失败 envelope 保留用于审计，artifact 绑定不进入下游。隔离层透传这份失败结果。
 - 超时：发送协作式停止信号，旧 future 在自然结束前保留调度槽位；
 - 非法 envelope 或非法 evidence：按验证失败处理，不进入下游证据集合；
 - 预算或输出大小违反硬约束：拒绝提交成功结果，并记录事件/账本；
@@ -124,6 +125,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 隔离边界同样要求返回 `WorkerResult`，且 `artifacts` 为字符串名称到字符串正文的 mapping；不会把非法 artifact 强转文本或把空列表当成空 mapping。
 
 `ModelVerifier` 只读取本次返回结果：原始 verdict 从该结果的 `model-response` artifact（若含完整 text）或 envelope.answer 获取；token/cost 来自该 envelope 的合法 usage，不读取共享 `last_response`/`calls[-1]`，也不重新按 adapter 单价估算已报告成本。缺失或非法 usage 失败。
+
+`VerifyingAdapter` 判定失败时通过上述失败结果携带 worker + verifier 的已知 usage；verifier 调用异常时仍保留已完成 worker 的 usage，不能因验证失败把已知支出记为零。未报告的 provider 用量不会被猜测。
 
 ## 只读审计面
 

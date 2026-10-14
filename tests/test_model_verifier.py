@@ -17,6 +17,7 @@ from typing import Any, Mapping
 from surge_cluster import (
     AdapterFailure,
     DAGScheduler,
+    IsolatedAdapter,
     NodeSpec,
     RunSpec,
     VerifyingAdapter,
@@ -264,6 +265,44 @@ class VerifyingAdapterWithModelVerifierTests(unittest.TestCase):
         with self.assertRaises(AdapterFailure) as caught:
             adapter.run(_node(), {})
         self.assertEqual(caught.exception.kind, "verification")
+
+    def test_failed_verification_still_settles_known_costs(self) -> None:
+        for isolated in (False, True):
+            with self.subTest(isolated=isolated):
+                verdict = _VerdictAdapter('{"pass":false,"score":0,"issues":["unsupported"]}')
+                adapter = VerifyingAdapter(self._inner(), verifier=ModelVerifier(verdict), policy="fail")
+                if isolated:
+                    adapter = IsolatedAdapter(adapter)
+                with tempfile.TemporaryDirectory() as directory:
+                    with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                        scheduler.submit(RunSpec("failed-cost"), [_node(max_attempts=2)])
+                        result = scheduler.execute(adapter)
+                        self.assertEqual(result.status, "failed")
+                        self.assertAlmostEqual(result.spent_cost, 0.0011)
+                        attempt_cost = scheduler._conn.execute("SELECT SUM(cost) FROM attempts WHERE run_id='failed-cost'").fetchone()[0]
+                        self.assertAlmostEqual(attempt_cost, 0.0011)
+                        self.assertTrue(scheduler.budget_snapshot("failed-cost")["invariant_ok"])
+                        self.assertEqual(scheduler.artifacts("failed-cost"), [])
+                        stored = scheduler.envelopes("failed-cost")["n1"]
+                        self.assertEqual(stored["status"], "failed")
+                        self.assertFalse(stored["envelope"]["verification"]["passed"])
+                        self.assertEqual(len(scheduler.events("failed-cost", "task.failed")), 2)
+
+    def test_verifier_transport_failure_still_settles_worker_cost(self) -> None:
+        adapter = VerifyingAdapter(self._inner(), verifier=ModelVerifier(_RaisingAdapter()))
+        with tempfile.TemporaryDirectory() as directory:
+            with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                scheduler.submit(RunSpec("transport-cost"), [_node()])
+                result = scheduler.execute(adapter)
+                self.assertEqual(result.status, "failed")
+                self.assertAlmostEqual(result.spent_cost, 0.0004)
+
+    def test_verifier_failure_keeps_malformed_claims_and_known_usage(self) -> None:
+        inner = _WorkerAdapter(_envelope("42", None), {"notes": "42"})
+        adapter = VerifyingAdapter(inner, verifier=ModelVerifier(_RaisingAdapter()))
+        with self.assertRaises(AdapterFailure) as caught:
+            adapter.run(_node(), {})
+        self.assertEqual(caught.exception.result.envelope["usage"]["cost"], 0.0004)
 
     def test_scheduler_settles_worker_plus_verifier_cost(self) -> None:
         verdict = _VerdictAdapter('{"pass": true, "score": 1, "issues": []}')

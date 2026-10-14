@@ -598,14 +598,25 @@ class VerifyingAdapter:
             return result
         reader = context.get("read_artifact") if isinstance(context, Mapping) else None
         dependency_refs = context.get("artifacts") if isinstance(context, Mapping) else None
-        report = self.verifier.verify(
-            node,
-            envelope,
-            own_artifacts=result.artifacts,
-            dependency_refs=dependency_refs if isinstance(dependency_refs, Mapping) else {},
-            read_artifact=reader if callable(reader) else None,
-            context=context,
-        )
+        verifier_failure = None
+        try:
+            report = self.verifier.verify(
+                node,
+                envelope,
+                own_artifacts=result.artifacts,
+                dependency_refs=dependency_refs if isinstance(dependency_refs, Mapping) else {},
+                read_artifact=reader if callable(reader) else None,
+                context=context,
+            )
+        except AdapterFailure as exc:
+            verifier_failure = exc
+            failed_envelope = exc.result.envelope if isinstance(exc.result, WorkerResult) else {}
+            report = VerificationResult(
+                verifier=self.verifier.name, passed=False, score=0.0,
+                checked_claims=len(envelope["claims"]) if isinstance(envelope.get("claims"), list) else 0,
+                issues=(VerificationIssue("verifier_failed", str(exc)),),
+                usage=failed_envelope.get("usage") if isinstance(failed_envelope, Mapping) else None,
+            )
         annotated = dict(envelope)
         annotated["verification"] = report.as_dict()
         # 模型验证器的 token 必须折回本节点的 usage，否则预算结算会少记真实开销。
@@ -634,13 +645,17 @@ class VerifyingAdapter:
                 for issue in report.issues
             ]
         self.records.append({"node_id": node.id, "verification": report.as_dict()})
+        annotated_result = WorkerResult(envelope=annotated, artifacts=result.artifacts)
+        if verifier_failure is not None:
+            raise AdapterFailure(str(verifier_failure), kind=verifier_failure.kind, retryable=verifier_failure.retryable, result=annotated_result) from verifier_failure
         if self.policy == "fail" and not report.passed:
             raise AdapterFailure(
                 f"verification failed with {len(report.issues)} issue(s)",
                 kind="verification",
                 retryable=False,
+                result=annotated_result,
             )
-        return WorkerResult(envelope=annotated, artifacts=result.artifacts)
+        return annotated_result
 
 
 @dataclass

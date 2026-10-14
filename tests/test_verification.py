@@ -182,6 +182,8 @@ class VerifyingAdapterTests(unittest.TestCase):
         with self.assertRaises(AdapterFailure) as caught:
             adapter.run(_node(), {})
         self.assertEqual(caught.exception.kind, "verification")
+        self.assertEqual(caught.exception.result.envelope["answer"], "42")
+        self.assertFalse(caught.exception.result.envelope["verification"]["passed"])
 
     def test_verification_report_summarizes_records(self) -> None:
         adapter = VerifyingAdapter(self._inner(), policy="annotate")

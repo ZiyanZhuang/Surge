@@ -212,10 +212,11 @@ class AdapterFailure(RuntimeError):
     避免任何一层反向依赖具体传输实现。
     """
 
-    def __init__(self, message: str, *, kind: str = "adapter", retryable: bool = False):
+    def __init__(self, message: str, *, kind: str = "adapter", retryable: bool = False, result: WorkerResult | None = None):
         super().__init__(message)
         self.kind = kind
         self.retryable = retryable
+        self.result = result
 
 
 class WorkerAdapter(Protocol):
@@ -1724,7 +1725,13 @@ class DAGScheduler:
         node: NodeSpec = info["node"]
         attempt_id = info["attempt_id"]
         try:
-            result = future.result()
+            failure = None
+            try:
+                result = future.result()
+            except AdapterFailure as exc:
+                if exc.result is None:
+                    raise
+                failure, result = exc, exc.result
             if not isinstance(result, WorkerResult):
                 raise TypeError("worker adapter must return WorkerResult")
             with self._lock, self._conn:
@@ -1764,6 +1771,8 @@ class DAGScheduler:
                     )
                 else:
                     report = validate_envelope(result.envelope, set(refs.values()) | set(refs.keys()))
+                if failure is not None:
+                    report = ValidationReport(False, report.errors + (str(failure),), score=0.0)
                 route_rate = None
                 if info.get("route"):
                     route_rate = next(
@@ -1787,7 +1796,7 @@ class DAGScheduler:
                     # 先 CAS 结束 attempt，再结算 reservation；迟到 future 将直接被丢弃。
                     claimed = self._conn.execute(
                         """
-                        UPDATE attempts SET status='failed',finished_at=?,error=?,envelope=?
+                        UPDATE attempts SET status='failed',finished_at=?,error=?,envelope=?,cost=?
                         WHERE id=? AND run_id=? AND node_id=? AND status='running'
                           AND EXISTS (
                               SELECT 1 FROM nodes
@@ -1795,7 +1804,7 @@ class DAGScheduler:
                           )
                           AND EXISTS (SELECT 1 FROM runs WHERE id=? AND owner_id=?)
                         """,
-                        (time.time(), error, envelope_record, attempt_id, run_id, node.id, run_id, node.id, attempt_id, run_id, self._owner_id),
+                        (time.time(), error, envelope_record, actual if math.isfinite(actual) and actual >= 0 else 0.0, attempt_id, run_id, node.id, run_id, node.id, attempt_id, run_id, self._owner_id),
                     ).rowcount
                     if not claimed:
                         # artifact 表没有 attempt_id；当前事务仍持有 owner/节点锁，
@@ -1817,6 +1826,8 @@ class DAGScheduler:
                         self._conn.execute("UPDATE nodes SET status='failed',progress=0,error=?,current_attempt_id=NULL WHERE run_id=? AND id=? AND status='running' AND current_attempt_id=?", (error, run_id, node.id, attempt_id))
                         outcome = "failed"
                     self._event(run_id, node.id, "validation.failed", error)
+                    if failure is not None:
+                        self._event(run_id, node.id, "task.failed", f"{error}; {outcome}")
                     events.append(f"{node.id}: {outcome}: validation")
                     return
 
