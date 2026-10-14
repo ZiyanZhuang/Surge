@@ -280,15 +280,6 @@ export function apply(ctx, config = {}) {
       sendJson(res, 401, { error: 'invalid api key' });
       return;
     }
-    if (closing) {
-      sendJson(res, 503, { error: 'bridge is shutting down' });
-      return;
-    }
-    // I5
-    if (active >= maxConcurrent) {
-      sendJson(res, 429, { error: `bridge concurrency limit reached (${maxConcurrent})` });
-      return;
-    }
     let bodyText;
     try {
       bodyText = await readBody(req);
@@ -312,6 +303,15 @@ export function apply(ctx, config = {}) {
       return;
     }
 
+    if (closing) {
+      sendJson(res, 503, { error: 'bridge is shutting down' });
+      return;
+    }
+    // I5：读取 body 后再认领槽位，检查与递增之间不能 await。
+    if (active >= maxConcurrent) {
+      sendJson(res, 429, { error: `bridge concurrency limit reached (${maxConcurrent})` });
+      return;
+    }
     active += 1;
     const release = () => {
       active -= 1;

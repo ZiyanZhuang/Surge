@@ -12,7 +12,7 @@
  * 用法：node dsh-bridge/selftest.mjs [--write-golden]
  */
 
-import { createServer } from 'node:http';
+import { createServer, request } from 'node:http';
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -332,6 +332,28 @@ async function main() {
   check('second concurrent request → 429', second.status === 429, `got ${second.status}`);
   check('429 explains the limit', /concurrency limit/.test(await second.text()));
   await first.text();
+
+  const body = JSON.stringify(REQUEST);
+  const pendingBodies = [0, 1].map(() => {
+    let sender;
+    const response = new Promise((resolve, reject) => {
+      sender = request(slowUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': token, 'content-length': Buffer.byteLength(body) },
+      }, (res) => {
+        res.resume();
+        res.on('end', () => resolve(res.statusCode));
+      });
+      sender.on('error', reject);
+      sender.flushHeaders();
+      sender.write(body.slice(0, 1));
+    });
+    return { sender, response };
+  });
+  await sleep(80);
+  for (const pending of pendingBodies) pending.sender.end(body.slice(1));
+  const statuses = (await Promise.all(pendingBodies.map((pending) => pending.response))).sort();
+  check('slow request bodies cannot bypass concurrency admission', statuses.join(',') === '200,429', statuses.join(','));
   await dispose(slowBridge);
 
   // ---- decision helper is exported for reuse ---------------------------
