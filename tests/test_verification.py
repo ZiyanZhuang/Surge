@@ -235,6 +235,28 @@ class VerifyingAdapterTests(unittest.TestCase):
 
 
 class VerifierSchedulerIntegrationTests(unittest.TestCase):
+    def test_unexpected_verifier_exception_preserves_completed_worker_cost(self) -> None:
+        class BrokenVerifier:
+            name = "broken-verifier"
+
+            def verify(self, *args, **kwargs):
+                raise RuntimeError("verification engine failed")
+
+        payload = _envelope("42", [])
+        payload["usage"] = {"total_tokens": 4, "cost": 0.001}
+        for policy in ("annotate", "fail"):
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as directory:
+                adapter = VerifyingAdapter(_StaticAdapter(payload, {"notes": "42"}), verifier=BrokenVerifier(), policy=policy)
+                with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                    scheduler.submit(RunSpec("broken-verifier"), [_node()])
+                    result = scheduler.execute(adapter)
+                    self.assertEqual(result.status, "failed")
+                    self.assertAlmostEqual(result.spent_cost, 0.001)
+                    self.assertEqual(scheduler.artifacts("broken-verifier"), [])
+                    stored = scheduler.envelopes("broken-verifier")["n1"]["envelope"]
+                    self.assertFalse(stored["verification"]["passed"])
+                    self.assertEqual(stored["answer"], "42")
+
     def test_dependency_evidence_passes_through_the_scheduler(self) -> None:
         verifier = EvidenceVerifier(require_content=True)
         hybrid = _HybridAdapter(_SourceAdapter(), _CitingAdapter("scout/source"))

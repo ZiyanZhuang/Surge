@@ -151,6 +151,8 @@ verdict JSON 超过解析深度/整数限制，或 score 超出 [0,1] 时，形�
 
 `VerifyingAdapter` 判定失败时通过上述失败结果携带 worker + verifier 的已知 usage；verifier 调用异常时仍保留已完成 worker 的 usage，不能因验证失败把已知支出记为零。未报告的 provider 用量不会被猜测。
 
+验证器抛出普通异常也属于验证执行失败：转为 `kind="verification"`，保留原异常链与已完成 worker 的 usage；annotate 策略允许内容判定未通过，不能把验证器本身崩溃当成成功调用。
+
 模型验证调用前先检查 worker 的 total_tokens/cost；缺失、负数、布尔、非数字或非有限值不得被验证费用相加“洗白”，也不得先追加一次有成本的验证调用。合并验证费用时同样校验两侧与合计值，不用零替换非法用量。
 
 provenance 名称解析与调度器保持当前节点名称优先；依赖限定名称按完整 `node_id/name` 匹配，不以第一个 `/` 拆分，因此 node ID 或 artifact 名称含 `/` 时仍可重建引用。歧义引用仍报告问题。

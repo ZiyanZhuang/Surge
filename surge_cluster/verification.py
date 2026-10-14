@@ -610,9 +610,13 @@ class VerifyingAdapter:
                 read_artifact=reader if callable(reader) else None,
                 context=context,
             )
-        except AdapterFailure as exc:
-            verifier_failure = exc
-            failed_envelope = exc.result.envelope if isinstance(exc.result, WorkerResult) else {}
+        except Exception as exc:
+            if isinstance(exc, AdapterFailure):
+                verifier_failure = exc
+            else:
+                verifier_failure = AdapterFailure(f"verifier failed: {exc}", kind="verification")
+                verifier_failure.__cause__ = exc
+            failed_envelope = verifier_failure.result.envelope if isinstance(verifier_failure.result, WorkerResult) else {}
             report = VerificationResult(
                 verifier=self.verifier.name, passed=False, score=0.0,
                 checked_claims=len(envelope["claims"]) if isinstance(envelope.get("claims"), list) else 0,
