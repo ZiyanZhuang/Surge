@@ -84,6 +84,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true", help="offline LocalEchoAdapter validation only")
     parser.add_argument("--endpoint", default=None, help="authorized Messages SSE endpoint")
     parser.add_argument("--model", default="gpt-6.1-sol")
+    parser.add_argument("--api-key", default="local", help="Messages endpoint key; non-placeholder values are redacted in reports")
     parser.add_argument("--timeout", type=float, default=120.0, help="per-request timeout in seconds")
     parser.add_argument("--max-output-tokens", type=int, default=2000)
     parser.add_argument("--cost-per-1k-tokens", type=float, default=None)
@@ -141,6 +142,7 @@ def _build_adapter(args: argparse.Namespace, run_spec: RunSpec):
             args.model,
             timeout=args.timeout,
             max_output_tokens=args.max_output_tokens,
+            api_key=args.api_key,
             cost_per_1k_tokens=(
                 run_spec.cost_per_1k_tokens if args.cost_per_1k_tokens is None else args.cost_per_1k_tokens
             ),
@@ -154,7 +156,7 @@ def _build_adapter(args: argparse.Namespace, run_spec: RunSpec):
             "request_max_tokens_ceiling": args.max_output_tokens,
             "cost_per_1k_tokens": http_adapter.cost_per_1k_tokens,
             "transport": "Anthropic Messages SSE; authorized local reverse proxy or compatible endpoint",
-            "api_key_placeholder": http_adapter.api_key,
+            "api_key_placeholder": "local" if http_adapter.api_key == "local" else "[redacted]",
             "isolated": bool(args.isolate),
         }
     if args.isolate and not args.dry_run:

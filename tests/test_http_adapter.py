@@ -516,6 +516,17 @@ class HttpAdapterTests(unittest.TestCase):
                     call_messages_endpoint(self.url, "model", "work", 1.0, **{name: value})
                 urlopen.assert_not_called()
 
+    def test_http_errors_do_not_expose_configured_api_key(self) -> None:
+        key = "test-http-auth-private-marker"
+        _FakeHandler.response_status = 401
+        _FakeHandler.payload = ("rejected credential: " + key).encode()
+        adapter = self._adapter(api_key=key)
+        with self.assertRaises(AdapterFailure) as caught:
+            adapter.run(NodeSpec("n", "work"), {})
+        self.assertEqual(caught.exception.kind, "http")
+        self.assertNotIn(key, str(caught.exception))
+        self.assertNotIn(key, json.dumps(adapter.calls))
+
     def test_invalid_configuration_is_rejected(self) -> None:
         for extractor in (False, object()):
             with self.subTest(extractor=extractor), self.assertRaises(ValueError):

@@ -82,6 +82,8 @@ strict 模式下，`answer`、`claims`、`citations`、`confidence`、`warnings`
 
 当前 `HttpWorkerAdapter` 已经是库的一等公民：实现在 `surge_cluster/http_adapter.py`，由 `surge_cluster` 顶层导出，`benchmark_real_adapter_smoke.py` 只是它的薄包装。它遵守上述策略，但仍然是本地 reverse-proxy adapter，不是 Host `llm.stream` Service 的直接 bridge。
 
+CLI 支持 `--api-key` 传递 Messages/bridge 鉴权键，默认仍为占位值 local；非占位键在报告中记为 [redacted]，HTTP 错误正文中的同一配置键也会被替换。可从本机 token 文件由 shell 读取传入，避免在命令历史中写入字面值；不要把凭据写进计划或提交到 Git。
+
 ## 库内适配器与执行入口
 
 ```python

@@ -27,11 +27,13 @@ class _FakeHandler(BaseHTTPRequestHandler):
     response_status = 200
     response_type = "text/event-stream"
     received: dict[str, Any] | None = None
+    received_api_key: str | None = None
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib handler API
         cls = self.__class__
         length = int(self.headers.get("content-length", "0"))
         cls.received = json.loads(self.rfile.read(length).decode("utf-8"))
+        cls.received_api_key = self.headers.get("x-api-key")
         time.sleep(cls.delay)
         try:
             self.send_response(cls.response_status)
@@ -166,6 +168,7 @@ class RunDagCliTests(unittest.TestCase):
         _FakeHandler.response_status = 200
         _FakeHandler.response_type = "text/event-stream"
         _FakeHandler.received = None
+        _FakeHandler.received_api_key = None
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), _FakeHandler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -204,6 +207,15 @@ class RunDagCliTests(unittest.TestCase):
         count = len(report["adapter_calls"])
         adapter.calls.append({"node_id": "late"})
         self.assertEqual(len(report["adapter_calls"]), count)
+
+    def test_cli_supports_documented_bridge_key_without_report_leak(self) -> None:
+        self._write_plan()
+        key = "test-bridge-auth-private-marker"
+        code, report = self._run("--endpoint", self.url, "--api-key", key)
+        self.assertEqual(code, 0)
+        self.assertEqual(_FakeHandler.received_api_key, key)
+        self.assertNotIn(key, json.dumps(report))
+        self.assertEqual(report["adapter"]["api_key_placeholder"], "[redacted]")
 
     def test_dry_run_executes_plan_offline(self) -> None:
         self._write_plan()

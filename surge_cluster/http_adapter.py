@@ -248,6 +248,8 @@ def call_messages_endpoint(
             content_type = response.headers.get("content-type")
     except urllib.error.HTTPError as exc:
         detail = exc.read(2048).decode("utf-8", errors="replace")
+        if isinstance(api_key, str) and api_key and api_key != "local":
+            detail = detail.replace(api_key, "[redacted]")
         retryable = exc.code == 408 or exc.code == 429 or exc.code >= 500
         raise AdapterFailure(
             f"adapter HTTP {exc.code}: {detail}", kind="http", retryable=retryable
