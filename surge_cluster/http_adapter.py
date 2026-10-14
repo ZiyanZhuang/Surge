@@ -54,6 +54,12 @@ def _positive_integer(value: Any, name: str) -> int:
     return value
 
 
+def _validate_api_key(value: Any) -> None:
+    if not isinstance(value, str) or any(ord(char) < 32 or ord(char) > 255 or ord(char) == 127 for char in value):
+        # urllib 的 header 异常会回显输入值，必须在进入传输层前安全拒绝。
+        raise ValueError("api_key must be a header-safe string")
+
+
 def extract_json_answer(text: str) -> str | None:
     """从模型输出中取出 JSON ``answer`` 字段；无法解析时返回 None。"""
     try:
@@ -221,6 +227,7 @@ def call_messages_endpoint(
         raise ValueError("model must be a non-empty string")
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValueError("prompt must be a non-empty string")
+    _validate_api_key(api_key)
     headers = {
         "content-type": "application/json",
         "x-api-key": api_key,
@@ -359,6 +366,7 @@ class HttpWorkerAdapter:
         self.answer_extractor = default_answer_extractor if answer_extractor is None else answer_extractor
         if not callable(self.answer_extractor):
             raise ValueError("answer_extractor must be callable")
+        _validate_api_key(api_key)
         self.api_key = api_key
         self.extra_headers = dict(extra_headers or {})
         self.warning = warning

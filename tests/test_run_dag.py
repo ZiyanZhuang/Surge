@@ -217,6 +217,18 @@ class RunDagCliTests(unittest.TestCase):
         self.assertNotIn(key, json.dumps(report))
         self.assertEqual(report["adapter"]["api_key_placeholder"], "[redacted]")
 
+    def test_cli_rejects_invalid_key_without_leaking_credentials(self) -> None:
+        self._write_plan()
+        marker = "test-cli-private-header-marker"
+        for suffix in ("\n", "\r", "\u2603"):
+            with self.subTest(suffix=repr(suffix)):
+                code, report = self._run("--endpoint", self.url, "--api-key", marker + suffix)
+                self.assertEqual(code, 2)
+                self.assertEqual(report["error_kind"], "usage")
+                self.assertIn("api_key", report["error"])
+                self.assertNotIn(marker, json.dumps(report))
+        self.assertIsNone(_FakeHandler.received)
+
     def test_dry_run_executes_plan_offline(self) -> None:
         self._write_plan()
         code, report = self._run("--dry-run")

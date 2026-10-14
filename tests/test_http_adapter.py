@@ -539,6 +539,23 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertNotIn(key, str(caught.exception))
         self.assertNotIn(key, json.dumps(adapter.calls))
 
+    def test_invalid_api_keys_are_rejected_without_echo_before_dispatch(self) -> None:
+        marker = "test-private-header-marker"
+        for key in (None, True, b"bytes", marker + "\n", marker + "\r", marker + "\x00", marker + "\t", marker + "\x7f", marker + "\u2603"):
+            with self.subTest(key=repr(key)), mock.patch("surge_cluster.http_adapter.urllib.request.urlopen") as urlopen:
+                with self.assertRaisesRegex(ValueError, "api_key") as caught:
+                    self._adapter(api_key=key)
+                self.assertNotIn(marker, str(caught.exception))
+                with self.assertRaisesRegex(ValueError, "api_key") as caught:
+                    call_messages_endpoint(self.url, "model", "work", 1.0, api_key=key)
+                self.assertNotIn(marker, str(caught.exception))
+                urlopen.assert_not_called()
+
+    def test_latin1_api_key_remains_a_supported_header_value(self) -> None:
+        adapter = self._adapter(api_key="test-latin1-\u00e9")
+        adapter.run(NodeSpec("n", "work"), {})
+        self.assertTrue(adapter.calls[-1]["ok"])
+
     def test_invalid_configuration_is_rejected(self) -> None:
         for extractor in (False, object()):
             with self.subTest(extractor=extractor), self.assertRaises(ValueError):
