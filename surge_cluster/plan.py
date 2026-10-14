@@ -88,7 +88,11 @@ def _string(value: Any, where: str) -> str:
 
 
 def _number(value: Any, where: str, *, positive: bool = False, allow_zero: bool = True) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+    try:
+        finite = not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(float(value))
+    except OverflowError:
+        finite = False
+    if not finite:
         raise PlanError(f"{where} must be a finite number")
     if positive and value <= 0:
         raise PlanError(f"{where} must be positive")
@@ -100,8 +104,8 @@ def _number(value: Any, where: str, *, positive: bool = False, allow_zero: bool 
 
 
 def _integer(value: Any, where: str, *, minimum: int = 0) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
-        raise PlanError(f"{where} must be an integer >= {minimum}")
+    if isinstance(value, bool) or not isinstance(value, int) or not minimum <= value <= 2 ** 63 - 1:
+        raise PlanError(f"{where} must be an integer between {minimum} and {2 ** 63 - 1}")
     return value
 
 
@@ -118,7 +122,7 @@ def plan_from_mapping(mapping: Mapping[str, Any]) -> RunPlan:
     plan = _require_mapping(mapping, "plan")
     _reject_unknown(plan, _PLAN_KEYS, "plan")
     version = plan.get("schema_version")
-    if version != PLAN_SCHEMA_VERSION:
+    if isinstance(version, bool) or not isinstance(version, int) or version != PLAN_SCHEMA_VERSION:
         raise PlanError(
             f"plan.schema_version must be {PLAN_SCHEMA_VERSION}; got {version!r}"
         )
@@ -145,7 +149,7 @@ def plan_from_mapping(mapping: Mapping[str, Any]) -> RunPlan:
         seen.add(node_id)
         prompt = _string(node_mapping.get("prompt"), f"{where}.prompt")
         policy = node_mapping.get("validation_policy", "strict")
-        if policy not in {"strict", "lenient"}:
+        if not isinstance(policy, str) or policy not in {"strict", "lenient"}:
             raise PlanError(f"{where}.validation_policy must be 'strict' or 'lenient'")
         stage = node_mapping.get("stage", "")
         if not isinstance(stage, str):
@@ -243,9 +247,11 @@ def load_plan(path: str | Path) -> RunPlan:
         text = plan_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise PlanError(f"plan file not found: {plan_path}") from exc
+    except (OSError, UnicodeError) as exc:
+        raise PlanError(f"cannot read plan file: {exc}") from exc
     try:
         payload = json.loads(text)
-    except json.JSONDecodeError as exc:
+    except (ValueError, RecursionError) as exc:
         raise PlanError(f"plan file is not valid JSON: {exc}") from exc
     return plan_from_mapping(payload)
 

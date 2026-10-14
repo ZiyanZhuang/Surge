@@ -699,6 +699,20 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         db_path.rename(db_path.with_name("released.sqlite3"))
 
+    def test_submission_rejects_unrepresentable_numbers_atomically(self):
+        cases = (
+            (RunSpec("too-large", budget_cost=10 ** 400), NodeSpec("n", "work")),
+            (RunSpec("too-large", max_workers=10 ** 100), NodeSpec("n", "work")),
+            (RunSpec("too-large"), NodeSpec("n", "work", max_tokens=10 ** 100)),
+        )
+        for run, node in cases:
+            with self.subTest(run=run, node=node):
+                with self.scheduler(self._run_dir()) as scheduler:
+                    with self.assertRaises(ValueError):
+                        scheduler.submit(run, [node])
+                    with self.assertRaises(KeyError):
+                        scheduler.result(run.id)
+
     def test_execute_setup_failure_releases_owner_claim(self):
         directory = self._run_dir()
         artifact_parent = directory / "run-artifacts"

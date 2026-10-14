@@ -211,6 +211,38 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("schema_version", report["error"])
 
+    def test_malformed_plan_types_and_large_numbers_are_plan_errors(self) -> None:
+        for field, value in (
+            ("schema_version", True), ("validation_policy", []), ("validation_policy", {}),
+            ("budget_cost", 10 ** 400), ("max_tokens", 10 ** 100),
+        ):
+            with self.subTest(field=field, value=value):
+                mapping = _plan_mapping()
+                if field == "schema_version":
+                    mapping[field] = value
+                elif field == "budget_cost":
+                    mapping["run"][field] = value
+                else:
+                    mapping["nodes"][0][field] = value
+                self._write_plan(mapping)
+                code, report = self._run("--dry-run")
+                self.assertEqual(code, 2)
+                self.assertEqual(report["error_kind"], "plan")
+
+    def test_unreadable_plan_content_returns_a_plan_error(self) -> None:
+        for payload in (b"\xffinvalid UTF-8", b"[" * 2000 + b"]" * 2000, b'{"schema_version":' + b"1" * 5000 + b"}"):
+            with self.subTest(size=len(payload)):
+                self.plan.write_bytes(payload)
+                code, report = self._run("--dry-run")
+                self.assertEqual(code, 2)
+                self.assertEqual(report["error_kind"], "plan")
+
+    def test_plan_path_directory_returns_a_plan_error(self) -> None:
+        self.plan.mkdir()
+        code, report = self._run("--dry-run")
+        self.assertEqual(code, 2)
+        self.assertEqual(report["error_kind"], "plan")
+
     def test_max_nodes_smaller_than_plan_is_rejected(self) -> None:
         mapping = _plan_mapping()
         mapping["run"]["max_nodes"] = 1

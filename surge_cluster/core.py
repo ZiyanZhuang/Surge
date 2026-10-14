@@ -769,8 +769,13 @@ class DAGScheduler:
             or (len(reserved_device) == 4 and reserved_device[:3] in {"COM", "LPT"} and reserved_device[3].isdigit() and reserved_device[3] != "0")
         ):
             raise ValueError("run id must be a portable identifier (<=100 UTF-8 bytes)")
-        is_int = lambda value: isinstance(value, int) and not isinstance(value, bool)
-        is_finite = lambda value: isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+        is_int = lambda value: isinstance(value, int) and not isinstance(value, bool) and -(2 ** 63) <= value <= 2 ** 63 - 1
+
+        def is_finite(value: Any) -> bool:
+            try:
+                return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value))
+            except OverflowError:
+                return False
         if not is_int(run.max_nodes) or run.max_nodes < 1 or len(nodes) > run.max_nodes:
             raise ValueError(f"DAG exceeds max_nodes={run.max_nodes}")
         if (
