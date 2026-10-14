@@ -706,8 +706,8 @@ def build_provenance(
     """
     report = ProvenanceReport()
     nodes = list(scheduler.snapshot(run_id))
+    dependencies = {str(node["id"]): set(node.get("depends_on", ())) for node in nodes}
     rows = list(scheduler.artifacts(run_id))
-    content_by_ref: dict[str, str | None] = {}
     artifact_by_name: dict[tuple[str, str], str] = {}
 
     for node in nodes:
@@ -729,7 +729,6 @@ def build_provenance(
                     "detail": str(exc),
                 }
             )
-        content_by_ref[str(ref)] = content
         if content is not None:
             digest = content_digest(content)
             if digest != sha256:
@@ -777,6 +776,8 @@ def build_provenance(
     if claims_by_node:
         cited: set[str] = set()
         for node_id, claims in claims_by_node.items():
+            owners = {str(node_id), *dependencies.get(str(node_id), ())}
+            visible_artifacts = {binding: ref for binding, ref in artifact_by_name.items() if binding[0] in owners}
             for claim in claims:
                 if not isinstance(claim, Mapping):
                     continue
@@ -791,9 +792,9 @@ def build_provenance(
                 for ref in evidence:
                     key = str(ref)
                     if _is_artifact_ref(key):
-                        target = key if key in content_by_ref else None
+                        target = key if key in visible_artifacts.values() else None
                     else:
-                        target = _lookup_named(artifact_by_name, node_id, key)
+                        target = _lookup_named(visible_artifacts, node_id, key)
                     if target is None:
                         report.findings.append(
                             {
@@ -827,10 +828,7 @@ def _lookup_named(
     own = artifact_by_name.get((node_id, key))
     if own is not None:
         return own
-    if "/" in key:
-        matches = {ref for (owner, name), ref in artifact_by_name.items() if f"{owner}/{name}" == key}
-    else:
-        matches = {ref for (owner, name), ref in artifact_by_name.items() if name == key}
+    matches = {ref for (owner, name), ref in artifact_by_name.items() if owner != node_id and (name == key or f"{owner}/{name}" == key)}
     return next(iter(matches)) if len(matches) == 1 else None
 
 

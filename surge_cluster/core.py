@@ -1975,7 +1975,10 @@ class DAGScheduler:
 
     def snapshot(self, run_id: str) -> list[dict[str, Any]]:
         with self._lock:
-            return [dict(row) for row in self._conn.execute("SELECT id,status,attempt_count,error,stage,incremental_value,urgency,route_class,progress FROM nodes WHERE run_id=? ORDER BY wave,priority DESC,id", (run_id,))]
+            nodes = [dict(row) for row in self._conn.execute("SELECT id,depends_on,status,attempt_count,error,stage,incremental_value,urgency,route_class,progress FROM nodes WHERE run_id=? ORDER BY wave,priority DESC,id", (run_id,))]
+            for node in nodes:
+                node["depends_on"] = json.loads(node["depends_on"])
+            return nodes
 
     def artifacts(self, run_id: str, node_id: str | None = None) -> list[dict[str, Any]]:
         """只读列出已提交的 artifact 绑定，用于审计与 provenance 构建。

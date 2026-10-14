@@ -397,6 +397,41 @@ class _FakeScheduler:
 
 
 class ProvenanceTests(unittest.TestCase):
+    def test_non_dependency_collision_does_not_hide_direct_dependency(self) -> None:
+        class NamedSources:
+            def run(self, node, context):
+                artifacts = {"b/c": "direct source"} if node.id == "a" else {"c": "unrelated source"}
+                claims = []
+                if node.id == "sink":
+                    artifacts = {}
+                    claims = [{"id": "c", "text": "derived", "evidence_refs": ["a/b/c", "b/c"]}]
+                return WorkerResult(_envelope("42", claims), artifacts)
+
+        with tempfile.TemporaryDirectory() as directory:
+            with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                scheduler.submit(RunSpec("dependency-scope"), [_node(id="a"), _node(id="a/b"), _node(id="sink", depends_on=("a",), wave=1)])
+                self.assertEqual(scheduler.execute(NamedSources()).status, "succeeded")
+                report = build_provenance(scheduler, "dependency-scope").as_dict()
+                direct_ref = next(row["ref"] for row in report["artifacts"] if row["node_id"] == "a")
+        self.assertNotIn("dangling_reference", [item["code"] for item in report["findings"]])
+        citations = [edge for edge in report["edges"] if edge["kind"] == "cites"]
+        self.assertEqual(len(citations), 2)
+        self.assertTrue(all(edge["to"] == f"artifact:{direct_ref}" for edge in citations))
+
+    def test_non_dependency_artifacts_are_not_visible_by_name_or_digest(self) -> None:
+        content = "unrelated source"
+        class NamedSources:
+            def run(self, node, context):
+                return WorkerResult(_envelope("42", []), {"notes": content} if node.id == "source" else {})
+
+        refs = ["notes", "source/notes", f"artifact:{hashlib.sha256(content.encode()).hexdigest()}"]
+        with tempfile.TemporaryDirectory() as directory:
+            with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                scheduler.submit(RunSpec("unrelated-source"), [_node(id="source"), _node(id="sink")])
+                self.assertEqual(scheduler.execute(NamedSources()).status, "succeeded")
+                report = build_provenance(scheduler, "unrelated-source", claims_by_node={"sink": [{"id": "c", "evidence_refs": refs}]}).as_dict()
+        self.assertEqual({item["detail"] for item in report["findings"] if item["code"] == "dangling_reference"}, set(refs))
+
     def test_own_artifact_names_win_over_global_ambiguity(self) -> None:
         for name in ("source", "source/notes"):
             with self.subTest(name=name):
