@@ -60,6 +60,15 @@ class _NonSerializableAdapter:
         return WorkerResult(envelope={"answer": "x", "bad": float("nan")})
 
 
+class _InvalidArtifactAdapter:
+    def __init__(self, artifacts: Any):
+        self.artifacts = artifacts
+
+    def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
+        result = LocalEchoAdapter().run(node, context)
+        return WorkerResult(result.envelope, self.artifacts)
+
+
 class _ContextProbeAdapter:
     def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
         keys = sorted(context)
@@ -148,6 +157,19 @@ class IsolationTests(unittest.TestCase):
         with self.assertRaises(AdapterFailure) as caught:
             isolated.run(_node(), {})
         self.assertEqual(caught.exception.kind, "ValueError")
+
+    def test_isolation_preserves_artifact_type_rejections(self) -> None:
+        for artifacts in ({123: "text"}, {"notes": 123}, []):
+            for isolated in (False, True):
+                with self.subTest(artifacts=artifacts, isolated=isolated):
+                    inner = _InvalidArtifactAdapter(artifacts)
+                    adapter = IsolatedAdapter(inner) if isolated else inner
+                    with tempfile.TemporaryDirectory() as directory:
+                        with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                            scheduler.submit(RunSpec("invalid-artifact"), [_node(max_attempts=1)])
+                            result = scheduler.execute(adapter)
+                            self.assertEqual(result.status, "failed")
+                            self.assertEqual(scheduler.artifacts("invalid-artifact"), [])
 
     def test_control_callbacks_are_forwarded_to_the_parent(self) -> None:
         isolated = IsolatedAdapter(_ContextProbeAdapter())

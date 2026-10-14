@@ -121,6 +121,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 隔离配置 `hard_timeout_grace` 必须是有限非负数，`kill_grace` 必须是有限正数，均拒绝布尔值、NaN 与 Infinity，避免硬超时失效或回收等待异常。
 
+隔离边界同样要求返回 `WorkerResult`，且 `artifacts` 为字符串名称到字符串正文的 mapping；不会把非法 artifact 强转文本或把空列表当成空 mapping。
+
 ## 只读审计面
 
 调度器提供五个只读方法，供验证器、Gate 脚本和外部审计使用；它们不改变任何状态，也不参与调度决策：

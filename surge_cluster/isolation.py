@@ -96,11 +96,15 @@ def _child_entry(
     )
     try:
         result = adapter.run(node, context)
-        artifacts = getattr(result, "artifacts", None) or {}
+        if not isinstance(result, WorkerResult):
+            raise TypeError("worker adapter must return WorkerResult")
+        artifacts = result.artifacts
+        if not isinstance(artifacts, Mapping) or any(not isinstance(name, str) or not isinstance(content, str) for name, content in artifacts.items()):
+            raise ValueError("artifacts must map string names to string contents")
         payload: dict[str, Any] = {
             "ok": True,
             "envelope": _json_safe(result.envelope),
-            "artifacts": {str(name): str(content) for name, content in dict(artifacts).items()},
+            "artifacts": dict(artifacts),
         }
     except BaseException as exc:  # noqa: BLE001 - 子进程必须把任何失败变成数据
         payload = {
