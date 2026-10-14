@@ -818,6 +818,7 @@ class DAGScheduler:
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate node id")
         known = set(ids)
+        stage_totals: dict[str, float] = {}
         for node in nodes:
             if not isinstance(node.prompt, str):
                 raise ValueError(f"node prompt must be text: {node.id}")
@@ -840,6 +841,10 @@ class DAGScheduler:
             missing = set(node.depends_on) - known
             if missing:
                 raise ValueError(f"node {node.id} has missing dependencies: {sorted(missing)}")
+            stage = node.stage or f"wave-{node.wave}"
+            stage_totals[stage] = stage_totals.get(stage, 0.0) + node.incremental_value
+            if not _is_finite_number(stage_totals[stage]):
+                raise ValueError(f"total incremental value must be finite: {stage}")
 
         # 拓扑消除检查环，避免合法长链耗尽 Python 调用栈。
         graph = {node.id: set(node.depends_on) for node in nodes}

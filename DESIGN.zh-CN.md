@@ -113,6 +113,7 @@ nodes = [
 - 终态保护也在 SQLite claim 的条件 UPDATE 内检查；持有旧 pending/running 快照的其他连接不能重新认领刚结束的 run，竞争失败后只读返回终态结果。
 - Run deadline、节点 timeout、最大重试次数和输出大小共同构成停止条件；线程池只能协作式取消，不能强杀不合作的 Python 线程。节点超时会发出协作式停止信号，但保留旧 future 占用槽位直到自然结束，所以不合作 worker 可能阻塞重试直到 run deadline；到达 deadline 后调度器会 detach 迟到 future、完成 run 状态结算并返回，线程本身仍可能在后台继续。需要硬超时和严格物理并发时应使用进程隔离。
 - 节点是否超时按 worker 实际结束时刻判断，结束时间在 Future 通知前记录；调度线程晚观察或等待快照遗漏刚完成的 future，不会把已及时结束的 worker 误判为超时。run deadline 与取消的提交检查仍独立生效。
+- 每个逻辑 stage 的 incremental_value 汇总也必须有限；个体有限但相加溢出时在 submit 前拒绝，避免 Infinity 比较让增量目标提前被判为满足。
 - 同一 SQLite run 通过 owner lease 防止多个 scheduler 实例同时执行；这不是跨主机任务队列或完整分布式锁。
 - 多实例初始化新库时，WAL 模式切换遇到即时 locked 会在现有 5 秒等待上限内重试；其他初始化错误立即抛出并关闭连接，避免半初始化对象占用数据库文件。
 

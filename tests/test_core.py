@@ -828,6 +828,16 @@ class CoreTests(unittest.TestCase):
                 with self.subTest(operation=operation), self.assertRaises(ValueError):
                     operation()
 
+    def test_overflowing_stage_totals_are_rejected_before_persistence(self):
+        for stage in ("", "selected"):
+            with self.subTest(stage=stage), self.scheduler(self._run_dir()) as scheduler:
+                policy = StagePolicy(stage or "wave-0", target_progress=0.9)
+                nodes = [NodeSpec(f"n{i}", "work", stage=stage, incremental_value=1e308) for i in range(3)]
+                with self.assertRaisesRegex(ValueError, "incremental value"):
+                    scheduler.submit(RunSpec("overflow-stage", stage_policies=(policy,)), nodes)
+                with self.assertRaises(KeyError):
+                    scheduler.result("overflow-stage")
+
     def test_deep_dag_validation_does_not_use_the_python_call_stack(self):
         for cyclic in (False, True):
             with self.subTest(cyclic=cyclic):
