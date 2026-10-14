@@ -267,6 +267,32 @@ class _FakeScheduler:
 
 
 class ProvenanceTests(unittest.TestCase):
+    def test_own_artifact_names_win_over_global_ambiguity(self) -> None:
+        for name in ("source", "source/notes"):
+            with self.subTest(name=name):
+                class PerNodeSource:
+                    def run(self, node, context):
+                        return WorkerResult(
+                            _envelope("42", [{"id": "c", "text": "value", "evidence_refs": [name]}]),
+                            {name: f"{node.id}: measured 42"},
+                        )
+
+                with tempfile.TemporaryDirectory() as directory:
+                    with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                        scheduler.submit(RunSpec("own-names"), [_node(id="n1"), _node(id="n2")])
+                        self.assertEqual(scheduler.execute(PerNodeSource()).status, "succeeded")
+                        report = build_provenance(scheduler, "own-names").as_dict()
+                        self.assertNotIn("dangling_reference", [item["code"] for item in report["findings"]])
+
+    def test_slash_qualified_dependency_names_remain_resolvable(self) -> None:
+        adapter = _HybridAdapter(_SourceAdapter(), _CitingAdapter("scout/part/source"), first_id="scout/part")
+        with tempfile.TemporaryDirectory() as directory:
+            with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                scheduler.submit(RunSpec("slash-name"), [_node(id="scout/part"), _node(id="sink", depends_on=("scout/part",), wave=1)])
+                self.assertEqual(scheduler.execute(adapter).status, "succeeded")
+                report = build_provenance(scheduler, "slash-name").as_dict()
+                self.assertNotIn("dangling_reference", [item["code"] for item in report["findings"]])
+
     def _run_once(self, directory: str) -> tuple[Path, Any, dict[str, Any]]:
         db = Path(directory) / "prov.sqlite3"
         adapter = _StaticAdapter(

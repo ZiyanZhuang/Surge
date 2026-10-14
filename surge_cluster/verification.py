@@ -810,10 +810,13 @@ def _lookup_named(
     artifact_by_name: Mapping[tuple[str, str], str], node_id: str, key: str
 ) -> str | None:
     """把 ``dep/name`` 或短名称解析为引用；解析不到时返回 None。"""
+    own = artifact_by_name.get((node_id, key))
+    if own is not None:
+        return own
     if "/" in key:
-        owner, _, name = key.partition("/")
-        return artifact_by_name.get((owner, name))
-    matches = {ref for (owner, name), ref in artifact_by_name.items() if name == key}
+        matches = {ref for (owner, name), ref in artifact_by_name.items() if f"{owner}/{name}" == key}
+    else:
+        matches = {ref for (owner, name), ref in artifact_by_name.items() if name == key}
     return next(iter(matches)) if len(matches) == 1 else None
 
 
