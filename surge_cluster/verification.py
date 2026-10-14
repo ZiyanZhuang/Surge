@@ -494,7 +494,10 @@ class ModelVerifier:
                 ),
                 model=getattr(self.adapter, "model", None),
             )
-        _require_budget_usage(envelope.get("usage"))
+        worker_usage = _require_budget_usage(envelope.get("usage"))
+        remaining_tokens = node.max_tokens - worker_usage["total_tokens"]
+        if remaining_tokens < 1:
+            raise AdapterFailure("node token budget exhausted before verification", kind="budget")
         prompt = build_verification_prompt(
             node,
             envelope,
@@ -507,7 +510,7 @@ class ModelVerifier:
             prompt=prompt,
             max_attempts=1,
             timeout_seconds=self.timeout_seconds or node.timeout_seconds,
-            max_tokens=self.max_tokens or node.max_tokens,
+            max_tokens=min(self.max_tokens or node.max_tokens, int(remaining_tokens)),
             validation_policy="lenient",
         )
         result = self.adapter.run(verdict_node, dict(context or {}))

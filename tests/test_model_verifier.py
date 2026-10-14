@@ -95,6 +95,17 @@ CLAIM = [{"id": "c1", "text": "the measured value is 42", "evidence_refs": ["not
 
 
 class ModelVerifierUnitTests(unittest.TestCase):
+    def test_verifier_request_uses_only_the_remaining_node_tokens(self) -> None:
+        class RecordingAdapter(_VerdictAdapter):
+            def run(self, node, context):
+                self.limit = node.max_tokens
+                return super().run(node, context)
+
+        adapter = RecordingAdapter('{"pass":true,"score":1,"issues":[]}', usage=(2, 1))
+        report = ModelVerifier(adapter, max_tokens=100).verify(_node(max_tokens=50), _envelope("42", CLAIM), own_artifacts={"notes": "42"})
+        self.assertTrue(report.passed)
+        self.assertEqual(adapter.limit, 10)
+
     def test_pathological_verdicts_are_unverified_and_retain_usage(self) -> None:
         texts = [
             '{"pass":true,"score":' + "1" + "0" * 400 + ',"issues":[]}',
@@ -267,6 +278,18 @@ class ModelVerifierUnitTests(unittest.TestCase):
 
 
 class VerifyingAdapterWithModelVerifierTests(unittest.TestCase):
+    def test_exhausted_worker_budget_does_not_start_a_verifier_call(self) -> None:
+        for policy in ("annotate", "fail"):
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as directory:
+                verdict = _VerdictAdapter('{"pass":true,"score":1,"issues":[]}')
+                adapter = VerifyingAdapter(self._inner(), verifier=ModelVerifier(verdict), policy=policy)
+                with DAGScheduler(Path(directory) / "run.sqlite3") as scheduler:
+                    scheduler.submit(RunSpec("exhausted"), [_node(max_tokens=40)])
+                    result = scheduler.execute(adapter)
+                    self.assertEqual(result.status, "failed")
+                    self.assertEqual(verdict.calls, 0)
+                    self.assertAlmostEqual(result.spent_cost, 0.0004)
+
     def _inner(self) -> _WorkerAdapter:
         return _WorkerAdapter(_envelope("42", CLAIM, warnings=["original"]), {"notes": "the measured value is 42"})
 

@@ -26,6 +26,13 @@ from surge_cluster.verification import ModelVerifier, json_safe
 
 
 class JsonSafetyTests(unittest.TestCase):
+    def test_exhausted_node_budget_fails_before_verifier_dispatch(self) -> None:
+        adapter = mock.Mock()
+        with self.assertRaises(AdapterFailure) as caught:
+            ModelVerifier(adapter).verify(NodeSpec("n", "work", max_tokens=1), {"usage": {"total_tokens": 1, "cost": 0}}, own_artifacts={"notes": "42"})
+        self.assertEqual(caught.exception.kind, "budget")
+        adapter.run.assert_not_called()
+
     def test_unrepresentable_usage_fails_before_verifier_dispatch(self) -> None:
         adapter = mock.Mock()
         for key in ("total_tokens", "cost"):

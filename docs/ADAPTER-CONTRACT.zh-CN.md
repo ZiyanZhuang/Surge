@@ -162,6 +162,8 @@ verdict JSON 超过解析深度/整数限制，或 score 超出 [0,1] 时，形�
 
 模型验证调用前先检查 worker 的 total_tokens/cost；缺失、负数、布尔、非数字或非有限值不得被验证费用相加“洗白”，也不得先追加一次有成本的验证调用。合并验证费用时同样校验两侧与合计值，不用零替换非法用量。
 
+ModelVerifier 从 node.max_tokens 中扣除已报告 worker tokens；不足 1 token 时以 `kind="budget"` 停止，验证请求 max_tokens 限于剩余整数额度及显式上限的较小值。输入 token 仍计入最终总 usage，合并后由调度器检查节点/运行预算。
+
 provenance 名称解析与调度器保持当前节点名称优先；依赖限定名称按完整 `node_id/name` 匹配，不以第一个 `/` 拆分，因此 node ID 或 artifact 名称含 `/` 时仍可重建引用。歧义引用仍报告问题。
 
 `artifact:<64 位小写十六进制 SHA-256>` 是保留的内容引用，不作为名称别名解析；同形 artifact 名称不能冒充另一份正文。限定名产生歧义时只保留明确名称与 digest，不静默选最后一个绑定。按 digest 引用的正文若也存在于独立依赖中，验证器使用该依赖来源；当前节点普通名称仍保留 own 优先级。
