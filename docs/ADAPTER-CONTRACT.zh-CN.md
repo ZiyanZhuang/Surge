@@ -117,7 +117,7 @@ adapter = HttpWorkerAdapter(
 
 计划结构错误与调度器提交时发现的语义错误（包括依赖环、反向波次依赖）均返回退出码 `2` 和 `error_kind="plan"` 的 JSON 报告，不派发 worker。
 
-读取失败、非法 UTF-8/JSON、错误字段类型与不可表示数值也属于计划错误。schema_version 必须是整数版本号；持久化整数字段限于 SQLite 有符号 64 位范围，超限在提交前拒绝，Python API 与 CLI 都不会留下半个 run。
+读取失败、非法 UTF-8/JSON、错误字段类型与不可表示数值也属于计划错误。schema_version 必须是整数版本号；持久化整数字段限于 SQLite 有符号 64 位范围，超限在提交前拒绝，Python API 与 CLI 都不会留下半个 run。 REAL 类型的预算、单价、超时、增量价值及 recovery 时间戳在绑定前归一化为 float，避免合法有限整数误走 SQLite 的 64 位整数绑定。
 
 CLI 覆盖参数的错误属于 usage（退出码 2）：`--timeout` 必须有限且大于零，`--cost-per-1k-tokens` 必须有限且非负；dry-run 与真实模式执行相同检查。
 

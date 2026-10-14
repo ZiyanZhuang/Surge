@@ -929,6 +929,27 @@ class CoreTests(unittest.TestCase):
                 with self.subTest(operation=operation), self.assertRaises(ValueError):
                     operation()
 
+    def test_finite_integer_values_bind_as_sqlite_real_fields(self):
+        for run_fields, node_fields in (
+            ({"budget_cost": 10 ** 100}, {}),
+            ({"cost_per_1k_tokens": 10 ** 100}, {}),
+            ({}, {"timeout_seconds": 10 ** 100}),
+            ({}, {"incremental_value": 10 ** 100}),
+        ):
+            with self.subTest(run_fields=run_fields, node_fields=node_fields), self.scheduler(self._run_dir()) as scheduler:
+                run = RunSpec("finite-real", **run_fields)
+                node = NodeSpec("n", "work", **node_fields)
+                scheduler.submit(run, [node])
+                row = scheduler._conn.execute("SELECT budget_cost,cost_per_1k_tokens FROM runs").fetchone()
+                self.assertEqual(tuple(row), (float(run.budget_cost), float(run.cost_per_1k_tokens)))
+                row = scheduler._conn.execute("SELECT timeout_seconds,incremental_value,urgency FROM nodes").fetchone()
+                self.assertEqual(tuple(row), (float(node.timeout_seconds), float(node.incremental_value), float(node.urgency)))
+
+    def test_finite_integer_recovery_timestamp_is_bound_as_real(self):
+        with self.scheduler(self._run_dir()) as scheduler:
+            scheduler.submit(RunSpec("real-timestamp"), [NodeSpec("n", "work")])
+            self.assertEqual(scheduler.recover_stale("real-timestamp", now=10 ** 100), ())
+
     def test_overflowing_stage_totals_are_rejected_before_persistence(self):
         for stage in ("", "selected"):
             with self.subTest(stage=stage), self.scheduler(self._run_dir()) as scheduler:

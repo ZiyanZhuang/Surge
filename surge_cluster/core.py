@@ -939,11 +939,11 @@ class DAGScheduler:
                 (
                     run.id,
                     "pending",
-                    run.budget_cost,
+                    float(run.budget_cost),
                     run.max_nodes,
                     run.max_workers,
                     run.wave_success_threshold,
-                    run.cost_per_1k_tokens,
+                    float(run.cost_per_1k_tokens),
                     now + run.deadline_seconds,
                     json.dumps([asdict(policy) for policy in run.stage_policies]),
                     json.dumps([asdict(profile) for profile in run.route_profiles]),
@@ -961,11 +961,11 @@ class DAGScheduler:
                         node.wave,
                         node.priority,
                         node.max_attempts,
-                        node.timeout_seconds,
+                        float(node.timeout_seconds),
                         node.max_tokens,
                         node.validation_policy,
                         node.stage or f"wave-{node.wave}",
-                        node.incremental_value,
+                        float(node.incremental_value),
                         node.urgency,
                         node.route_class,
                         "pending",
@@ -1346,6 +1346,7 @@ class DAGScheduler:
             raise ValueError("owner_id must be a non-empty string")
         if not _is_finite_number(now):
             raise ValueError("now must be a finite timestamp")
+        now = float(now)
         recovered: list[str] = []
         with self._lock, self._conn:
             run = self._get_run(run_id)
