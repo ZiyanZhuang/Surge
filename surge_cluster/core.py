@@ -573,8 +573,8 @@ class DAGScheduler:
             or not required_artifact_columns.issubset(artifact_columns)
         ):
             if self._conn.execute("SELECT 1 FROM artifacts LIMIT 1").fetchone():
-                if not required_artifact_columns.issubset(artifact_columns):
-                    raise ValueError("legacy artifacts lack binding columns; manual migration required")
+                if artifact_columns != required_artifact_columns:
+                    raise ValueError("legacy artifacts have unknown or missing binding columns; manual migration required")
                 has_nulls = self._conn.execute("SELECT 1 FROM artifacts WHERE run_id IS NULL OR node_id IS NULL OR name IS NULL OR ref IS NULL OR path IS NULL OR sha256 IS NULL LIMIT 1").fetchone()
                 has_conflicts = self._conn.execute("SELECT 1 FROM artifacts GROUP BY run_id,node_id,name HAVING COUNT(*)>1 LIMIT 1").fetchone()
                 if has_nulls or has_conflicts:
@@ -671,11 +671,11 @@ class DAGScheduler:
         # 这里迁移为“每个 run/node/name 一条绑定”，文件内容仍由 digest 寻址。
         artifact_info = list(self._conn.execute("PRAGMA table_info(artifacts)"))
         artifact_columns = {row[1] for row in artifact_info}
-        # 预检查与写锁之间可能有旧客户端插入，不能用空表假设丢弃未知列。
-        if not required_artifact_columns.issubset(artifact_columns) and self._conn.execute("SELECT 1 FROM artifacts LIMIT 1").fetchone():
-            raise ValueError("legacy artifacts lack binding columns; manual migration required")
         artifact_pk = [row[1] for row in artifact_info if row[5]]
         if artifact_pk != expected_artifact_pk or not required_artifact_columns.issubset(artifact_columns):
+            # 预检查与写锁之间可能有旧客户端插入，不能用空表假设丢弃未知列。
+            if artifact_columns != required_artifact_columns and self._conn.execute("SELECT 1 FROM artifacts LIMIT 1").fetchone():
+                raise ValueError("legacy artifacts have unknown or missing binding columns; manual migration required")
             self._conn.execute("DROP INDEX IF EXISTS idx_artifacts_node")
             self._conn.execute("ALTER TABLE artifacts RENAME TO artifacts_legacy")
             self._conn.execute(

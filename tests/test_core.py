@@ -441,7 +441,7 @@ class CoreTests(unittest.TestCase):
             self.assertTrue(scheduler._conn.execute("SELECT 1 FROM events WHERE run_id='migrated'").fetchone())
 
     def test_ambiguous_legacy_artifacts_are_not_silently_discarded(self):
-        for mode in ("unbound", "duplicate", "null"):
+        for mode in ("unbound", "duplicate", "null", "extra-column"):
             with self.subTest(mode=mode):
                 db = self._run_dir() / "legacy-artifacts.sqlite3"
                 with closing(sqlite3.connect(db)) as connection, connection:
@@ -454,6 +454,9 @@ class CoreTests(unittest.TestCase):
                             ("a", "r", "n", "notes", "pa", "sa"),
                             ("b", "r", "n", "notes" if mode == "duplicate" else "other", None if mode == "null" else "pb", "sb"),
                         ])
+                    if mode == "extra-column":
+                        connection.execute("ALTER TABLE artifacts ADD COLUMN opaque_metadata TEXT")
+                        connection.execute("UPDATE artifacts SET opaque_metadata='preserve legacy annotation'")
                     before = tuple(connection.iterdump())
                 error = None
                 try:
@@ -501,6 +504,16 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(reader.execute("SELECT opaque_payload FROM artifacts").fetchall(), [("must preserve opaque payload",)])
         self.assertIsNotNone(error)
         self.assertIn("legacy artifacts", error)
+
+    def test_current_artifact_schema_preserves_extra_columns_without_rebuilding(self):
+        db = self._run_dir() / "current-extra.sqlite3"
+        with DAGScheduler(db):
+            pass
+        with closing(sqlite3.connect(db)) as connection, connection:
+            connection.execute("ALTER TABLE artifacts ADD COLUMN opaque_metadata TEXT")
+            connection.execute("INSERT INTO artifacts VALUES(?,?,?,?,?,?,?)", ("r", "n", "notes", "ref", "path", "sha", "keep annotation"))
+        with DAGScheduler(db) as scheduler:
+            self.assertEqual(scheduler._conn.execute("SELECT opaque_metadata FROM artifacts").fetchone()[0], "keep annotation")
 
     def test_unambiguous_legacy_artifact_bindings_are_preserved(self):
         db = self._run_dir() / "legacy-artifacts.sqlite3"
