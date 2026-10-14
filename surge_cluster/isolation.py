@@ -119,7 +119,7 @@ def _child_entry(
         if isinstance(failed_result, WorkerResult):
             try:
                 payload["result"] = _json_safe({"envelope": failed_result.envelope, "artifacts": failed_result.artifacts})
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, RecursionError):
                 envelope = failed_result.envelope
                 usage = envelope.get("usage", {}) if isinstance(envelope, Mapping) else {}
                 try:
@@ -127,7 +127,7 @@ def _child_entry(
                         "persisted": "unavailable", "reason": "isolated result is not JSON serializable",
                         "usage": {key: usage[key] for key in ("total_tokens", "cost") if isinstance(usage, Mapping) and key in usage},
                     }, "artifacts": {}})
-                except (TypeError, ValueError):
+                except (TypeError, ValueError, RecursionError):
                     pass
     # 内层 adapter 的逐次调用证据留在子进程里，这里把它带回父进程，避免隔离
     # 让报告失去可审计的调用明细。
@@ -135,7 +135,7 @@ def _child_entry(
     if isinstance(calls, list) and calls and isinstance(calls[-1], Mapping):
         try:
             payload["adapter_call"] = _json_safe(dict(calls[-1]))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, RecursionError):
             pass
     try:
         conn.send(payload)

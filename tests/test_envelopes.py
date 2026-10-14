@@ -9,13 +9,14 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Any, Mapping
 
 from surge_cluster import DAGScheduler, NodeSpec, RunSpec, WorkerResult, build_provenance
-from surge_cluster.core import encode_envelope_record
+from surge_cluster.core import encode_envelope_record, validate_envelope
 
 
 def _envelope(answer: str, claims: list[dict[str, Any]] | None = None, **extra: Any) -> dict[str, Any]:
@@ -52,6 +53,18 @@ def _node(**overrides: Any) -> NodeSpec:
 
 
 class EnvelopePersistenceTests(unittest.TestCase):
+    def test_deep_invalid_envelope_fails_and_retains_usage(self) -> None:
+        nested = []
+        for _ in range(20000):
+            nested = [nested]
+        payload = _envelope("42", extra=nested, usage={"total_tokens": 4, "cost": 0.001})
+        self.assertFalse(validate_envelope(payload).ok)
+        with tempfile.TemporaryDirectory() as directory:
+            _, result, records = self._execute(directory, _StaticAdapter(payload), [_node()])
+        self.assertEqual(result.status, "failed")
+        self.assertAlmostEqual(result.spent_cost, 0.001)
+        self.assertEqual(records["n1"]["persisted"], "unavailable")
+
     def _execute(self, directory: str, adapter: Any, nodes: list[NodeSpec], run_id: str = "env"):
         db = Path(directory) / "env.sqlite3"
         run = RunSpec(id=run_id, budget_cost=5.0, max_nodes=max(1, len(nodes)), max_workers=1, deadline_seconds=30.0)
@@ -140,6 +153,19 @@ class EnvelopePersistenceTests(unittest.TestCase):
 
 
 class EnvelopeEncodingTests(unittest.TestCase):
+    def test_unrepresentable_envelopes_have_a_safe_failure_record(self) -> None:
+        nested = []
+        for _ in range(20000):
+            nested = [nested]
+        values = [nested, "\ud800"]
+        int_limit = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+        if int_limit:
+            values.append(10 ** (int_limit + 1))
+        for value in values:
+            with self.subTest(kind=type(value).__name__):
+                stored = json.loads(encode_envelope_record({"extra": value}))
+                self.assertEqual(stored["persisted"], "unavailable")
+
     def test_within_limit_is_stored_verbatim(self) -> None:
         payload = _envelope("42", [{"id": "c1", "text": "x", "evidence_refs": ["notes"]}])
         stored = encode_envelope_record(payload, max_bytes=10_000)

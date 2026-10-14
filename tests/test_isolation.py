@@ -84,6 +84,11 @@ class _PaidInvalidResultAdapter:
             del envelope["usage"]["cost"]
         if self.mode == "envelope":
             envelope["extra"] = float("nan")
+        elif self.mode == "envelope-depth":
+            nested = []
+            for _ in range(20000):
+                nested = [nested]
+            envelope["extra"] = nested
         artifacts = {}
         if self.mode in ("artifact-type", "artifact-rate"):
             artifacts = {"bad": 1}
@@ -151,7 +156,7 @@ def _node(**overrides: Any) -> NodeSpec:
 class IsolationTests(unittest.TestCase):
     def test_completed_invalid_results_retain_known_costs(self) -> None:
         for isolated in (False, True):
-            for mode in ("artifact-type", "artifact-size", "artifact-rate", "envelope"):
+            for mode in ("artifact-type", "artifact-size", "artifact-rate", "envelope", "envelope-depth"):
                 if not isolated and mode == "envelope":
                     continue
                 with self.subTest(isolated=isolated, mode=mode), tempfile.TemporaryDirectory() as directory:

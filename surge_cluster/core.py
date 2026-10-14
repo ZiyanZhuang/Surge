@@ -154,17 +154,21 @@ def encode_envelope_record(envelope: Any, *, max_bytes: int = MAX_PERSISTED_ENVE
     """
     try:
         text = json.dumps(envelope, ensure_ascii=False, allow_nan=False, sort_keys=True)
-    except (TypeError, ValueError) as exc:
+        data = text.encode("utf-8")
+    except (TypeError, ValueError, RecursionError) as exc:
+        try:
+            repr_digest = hashlib.sha256(repr(envelope).encode("utf-8")).hexdigest()
+        except (TypeError, ValueError, RecursionError):
+            repr_digest = None
         return json.dumps(
             {
                 "persisted": "unavailable",
                 "reason": f"envelope is not JSON serializable: {exc}",
-                "repr_sha256": hashlib.sha256(repr(envelope).encode("utf-8")).hexdigest(),
+                "repr_sha256": repr_digest,
             },
             ensure_ascii=False,
             sort_keys=True,
         )
-    data = text.encode("utf-8")
     if len(data) <= max_bytes:
         return text
     mapping = envelope if isinstance(envelope, Mapping) else {}
@@ -308,7 +312,7 @@ def validate_envelope(
         encoded_size = len(json.dumps(envelope, ensure_ascii=False, allow_nan=False).encode("utf-8"))
         if encoded_size > max_bytes:
             errors.append("envelope exceeds max_bytes")
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, RecursionError):
         errors.append("envelope is not JSON serializable")
     if not isinstance(envelope.get("answer"), str):
         errors.append("answer must be a string")
