@@ -24,6 +24,7 @@ from typing import Any, Iterable, Mapping, Protocol
 
 TERMINAL = {"succeeded", "failed", "blocked", "cancelled", "deferred"}
 RUN_TERMINAL = {"succeeded", "failed", "cancelled"}
+DATABASE_SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -522,6 +523,9 @@ class DAGScheduler:
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=5.0)
         try:
             self._conn.row_factory = sqlite3.Row
+            version = self._conn.execute("PRAGMA user_version").fetchone()[0]
+            if not 0 <= version <= DATABASE_SCHEMA_VERSION:
+                raise ValueError(f"unsupported database schema version {version}; supported up to {DATABASE_SCHEMA_VERSION}")
             # WAL 切换可能立即 BUSY；在原有 5 秒上限内等待其他初始化者。
             self._conn.execute("PRAGMA busy_timeout=5000")
             wal_deadline = time.monotonic() + 5.0
@@ -759,7 +763,7 @@ class DAGScheduler:
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_attempts_active ON attempts(run_id, status, lease_until)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_artifacts_node ON artifacts(run_id, node_id)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_events_run ON events(run_id, id)")
-        self._conn.execute("PRAGMA user_version=3")
+        self._conn.execute(f"PRAGMA user_version={DATABASE_SCHEMA_VERSION}")
         self._conn.commit()
 
     @staticmethod

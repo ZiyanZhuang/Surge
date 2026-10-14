@@ -7,6 +7,7 @@ import time
 import unittest
 import uuid
 from unittest import mock
+from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -342,6 +343,28 @@ class CoreTests(unittest.TestCase):
             result = scheduler.execute(CountingAdapter(invalid=True))
             self.assertEqual(result.status, "failed")
             self.assertEqual(result.failed, ("claim",))
+
+    def test_unknown_future_schema_is_rejected_without_changing_data(self):
+        directory = self._run_dir()
+        db = directory / "future.sqlite3"
+        with closing(sqlite3.connect(db)) as connection, connection:
+            connection.execute("PRAGMA user_version=99")
+            connection.execute("CREATE TABLE artifacts (id TEXT PRIMARY KEY, future_note TEXT)")
+            connection.executemany("INSERT INTO artifacts VALUES(?,?)", [("a", "retain A"), ("b", "retain B")])
+            before = tuple(connection.iterdump())
+        error = None
+        try:
+            with DAGScheduler(db):
+                pass
+        except ValueError as exc:
+            error = str(exc)
+        with closing(sqlite3.connect(db)) as connection, connection:
+            after = tuple(connection.iterdump())
+            version = connection.execute("PRAGMA user_version").fetchone()[0]
+        self.assertEqual(after, before, "unsupported schema data was rewritten")
+        self.assertEqual(version, 99)
+        self.assertIsNotNone(error)
+        self.assertIn("schema version", error)
 
     def test_very_old_schema_migrates_all_runtime_tables(self):
         directory = self._run_dir()
