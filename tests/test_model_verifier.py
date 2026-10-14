@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import json
+import concurrent.futures
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from typing import Any, Mapping
@@ -64,7 +66,11 @@ class _VerdictAdapter:
         self.prompts.append(node.prompt)
         self.last_response = {"text": self.text, "usage": dict(self.usage)}
         return WorkerResult(
-            envelope=_envelope(self.text, [], usage={"total_tokens": 0, "cost": 0.0}),
+            envelope=_envelope(self.text, [], usage={
+                **self.usage,
+                "total_tokens": sum(self.usage.values()),
+                "cost": sum(self.usage.values()) / 1000 * self.cost_per_1k_tokens,
+            }),
         )
 
 
@@ -88,6 +94,46 @@ CLAIM = [{"id": "c1", "text": "the measured value is 42", "evidence_refs": ["not
 
 
 class ModelVerifierUnitTests(unittest.TestCase):
+    def test_concurrent_verdicts_and_usage_stay_bound_to_each_result(self) -> None:
+        class ConcurrentAdapter:
+            model = "concurrent-verifier"
+            cost_per_1k_tokens = 0.01
+            barrier = threading.Barrier(2)
+
+            def run(self, node, context):
+                passed = node.id.startswith("good")
+                tokens = 11 if passed else 22
+                text = json.dumps({"pass": passed, "score": 1 if passed else 0, "issues": []})
+                self.last_response = {"text": text, "usage": {"input_tokens": tokens, "output_tokens": 0}}
+                result = WorkerResult(_envelope(text, [], usage={"total_tokens": tokens, "cost": tokens / 1000 * 0.01}))
+                self.barrier.wait(5)
+                return result
+
+        verifier = ModelVerifier(ConcurrentAdapter())
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(verifier.verify, _node(id=name), _envelope("42", CLAIM), own_artifacts={"notes": "42"}) for name in ("good", "bad")]
+            reports = [future.result(timeout=5) for future in futures]
+        self.assertEqual([report.passed for report in reports], [True, False])
+        self.assertEqual([report.usage["total_tokens"] for report in reports], [11, 22])
+
+    def test_returned_response_artifact_supplies_the_raw_verdict(self) -> None:
+        text = '{"pass": true, "score": 0.9, "issues": []}'
+        adapter = _WorkerAdapter(
+            _envelope("0.9", [], usage={"total_tokens": 15, "cost": 0.25}),
+            {"model-response": json.dumps({"text": text, "usage": {"input_tokens": 10, "output_tokens": 5}})},
+        )
+        report = ModelVerifier(adapter).verify(_node(), _envelope("42", CLAIM), own_artifacts={"notes": "42"})
+        self.assertTrue(report.passed)
+        self.assertEqual(report.usage["cost"], 0.25)
+
+    def test_invalid_returned_verifier_usage_fails_closed(self) -> None:
+        for usage in (None, {"total_tokens": -1, "cost": 0}, {"total_tokens": 10, "cost": float("nan")}):
+            with self.subTest(usage=usage):
+                adapter = _WorkerAdapter(_envelope('{"pass":true,"score":1,"issues":[]}', [], usage=usage), {})
+                with self.assertRaises(AdapterFailure) as caught:
+                    ModelVerifier(adapter).verify(_node(), _envelope("42", CLAIM), own_artifacts={"notes": "42"})
+                self.assertEqual(caught.exception.kind, "usage")
+
     def _verify(self, text: str, *, own: Mapping[str, str] | None = None, **kwargs: Any):
         adapter = _VerdictAdapter(text)
         verifier = ModelVerifier(adapter, **kwargs)

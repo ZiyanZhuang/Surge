@@ -123,6 +123,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 隔离边界同样要求返回 `WorkerResult`，且 `artifacts` 为字符串名称到字符串正文的 mapping；不会把非法 artifact 强转文本或把空列表当成空 mapping。
 
+`ModelVerifier` 只读取本次返回结果：原始 verdict 从该结果的 `model-response` artifact（若含完整 text）或 envelope.answer 获取；token/cost 来自该 envelope 的合法 usage，不读取共享 `last_response`/`calls[-1]`，也不重新按 adapter 单价估算已报告成本。缺失或非法 usage 失败。
+
 ## 只读审计面
 
 调度器提供五个只读方法，供验证器、Gate 脚本和外部审计使用；它们不改变任何状态，也不参与调度决策：

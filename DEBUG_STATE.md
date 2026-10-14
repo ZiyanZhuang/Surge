@@ -35,6 +35,7 @@
 | D11 | P1 | 完整 stage 目标遇到零价值节点时停止派发，挂起至 deadline | 已修复；核心 37 项、全量 193 项通过 |
 | D12 | P1 | bridge 读取 body 前检查容量，慢上传并发完成可突破 maxConcurrent | 已修复；Node 36 项、全量 Python 193 项通过 |
 | D13 | P1 | bridge 为不完整上游流生成成功结束，且强转/伪造 usage | 已修复；Node 42 项、Python 契约 5 项及全量 193 项通过 |
+| D14 | P1 | 并发 ModelVerifier 串用共享最后响应，且可漏计/重估 verifier 成本 | 已修复；模型验证 22 项、全量 196 项通过 |
 
 文档中部分“未来工作”描述与已有 bridge/模型验证实现不一致，待代码与证据核对。
 
@@ -67,6 +68,8 @@
   - Node 36/36；Python 193/193（45.034 秒）；golden 未变，构建与发布验证通过。
 - D13：要求恰好一个已知 finish 且后面无 chunk；缺失/未知/重复/迟到数据一律 error，无 message_stop。usage 只接受非负安全整数，不强转 null/string，不在起始帧填零。输出格式变更按贡献规范重新生成 golden，再跑 Python 契约与完整回归。
   - 正常 Node 42/42；Python 193/193（45.060 秒）；golden 重建后契约通过，构建与发布验证通过。
+- D14：verdict 与 usage 绑定本次 WorkerResult，读取返回 artifact 原文而非共享 last_response/calls[-1]；使用 envelope 已报告成本，非法 usage fail-closed。修正测试 verifier fixture 使其按 WorkerAdapter 契约报告实际 usage；新增双线程 barrier、原始 verdict artifact 与非法 usage 回归。
+  - 完整回归：196/196（45.087 秒）；Node 42/42、构建与发布验证通过。
 
 ## 假设列表
 

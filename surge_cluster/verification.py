@@ -39,6 +39,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Iterable, Mapping
 
 from .core import AdapterFailure, NodeSpec, WorkerResult
+from .http_adapter import ARTIFACT_NAME
 
 _DIGITS = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
 _FENCE = re.compile(r"^```[a-zA-Z0-9_-]*\s*|\s*```$")
@@ -443,36 +444,32 @@ class ModelVerifier:
         return {key: content for _pref, key, content in chosen.values()}
 
     def _raw_text_and_usage(self, result: WorkerResult) -> tuple[str, Mapping[str, Any] | None]:
-        response = getattr(self.adapter, "last_response", None)
-        if isinstance(response, Mapping) and isinstance(response.get("text"), str):
-            usage = response.get("usage")
-            return response["text"], usage if isinstance(usage, Mapping) else None
-        calls = getattr(self.adapter, "calls", None)
-        usage = None
-        if isinstance(calls, list) and calls and isinstance(calls[-1], Mapping):
-            candidate = calls[-1].get("usage")
-            if isinstance(candidate, Mapping):
-                usage = candidate
         envelope = result.envelope if isinstance(result.envelope, Mapping) else {}
         answer = envelope.get("answer")
-        return (answer if isinstance(answer, str) else ""), usage
+        text = answer if isinstance(answer, str) else ""
+        raw = result.artifacts.get(ARTIFACT_NAME) if isinstance(result.artifacts, Mapping) else None
+        if isinstance(raw, str):
+            try:
+                response = json.loads(raw)
+            except ValueError:
+                response = None
+            if isinstance(response, Mapping) and isinstance(response.get("text"), str):
+                text = response["text"]
+        usage = envelope.get("usage")
+        return text, usage if isinstance(usage, Mapping) else None
 
     def _usage_from(self, usage: Mapping[str, Any] | None) -> dict[str, Any] | None:
         if not isinstance(usage, Mapping):
-            return None
-        try:
-            input_tokens = int(usage.get("input_tokens") or 0)
-            output_tokens = int(usage.get("output_tokens") or 0)
-        except (TypeError, ValueError):
-            return None
-        rate = float(getattr(self.adapter, "cost_per_1k_tokens", 0.0) or 0.0)
-        total = input_tokens + output_tokens
-        return {
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "total_tokens": total,
-            "cost": total / 1000.0 * rate,
-        }
+            raise AdapterFailure("verifier result must report usage", kind="usage")
+        for key in ("total_tokens", "cost"):
+            value = usage.get(key)
+            try:
+                valid = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)) and value >= 0
+            except OverflowError:
+                valid = False
+            if not valid:
+                raise AdapterFailure(f"verifier usage.{key} must be a finite non-negative number", kind="usage")
+        return dict(usage)
 
     def verify(
         self,
