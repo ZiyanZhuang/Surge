@@ -354,6 +354,7 @@ def build_verification_prompt(
     max_task_chars: int = 4_000,
     max_evidence_chars: int = 8_000,
     max_total_evidence_chars: int = 24_000,
+    system_prompt: str = DEFAULT_VERIFIER_SYSTEM_PROMPT,
 ) -> str:
     """构造验证提示：只给任务、claim 与证据，不给 gold 标签。
 
@@ -384,8 +385,7 @@ def build_verification_prompt(
         used += len(chunk)
         blocks.append(f"--- {key} ---\n{chunk}")
     return (
-        "Judge whether the cited evidence supports each claim. You have no ground-truth "
-        "answer; do not invent one. Do not rewrite the work.\n"
+        f"{system_prompt}\n"
         'Answer with JSON only: {"pass": <bool>, "score": <0..1>, "issues": [<string>, ...], '
         '"revision_prompt": <string, optional>}\n'
         "pass is true only when every claim is supported by the evidence you were given.\n\n"
@@ -513,6 +513,7 @@ class ModelVerifier:
             evidence,
             max_evidence_chars=self.max_evidence_chars,
             max_total_evidence_chars=self.max_total_evidence_chars,
+            system_prompt=self.system_prompt,
         )
         verdict_node = NodeSpec(
             id=f"{node.id}/verify",

@@ -244,6 +244,13 @@ class ModelVerifierUnitTests(unittest.TestCase):
         self.assertNotIn("EXPECTED_ANSWER", prompt)
         self.assertNotIn("exe_ans", prompt)
 
+    def test_configured_verifier_instructions_reach_the_task_prompt(self) -> None:
+        adapter, _, _ = self._verify('{"pass":true,"score":1,"issues":[]}', system_prompt="DOMAIN-VERIFICATION-RULES")
+        prompt = adapter.prompts[0]
+        self.assertTrue(prompt.startswith("DOMAIN-VERIFICATION-RULES"))
+        self.assertIn('"pass"', prompt)
+        self.assertIn("the measured value is 42", prompt)
+
     def test_duplicate_evidence_is_sent_once(self) -> None:
         marker = "MEASURED-42-MARKER"
         adapter = _VerdictAdapter('{"pass": true, "score": 1, "issues": []}')

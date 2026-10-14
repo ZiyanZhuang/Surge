@@ -22,10 +22,16 @@ from surge_cluster import (
     WorkerResult,
     build_provenance,
 )
-from surge_cluster.verification import ModelVerifier, VerificationIssue, VerificationResult, json_safe
+from surge_cluster.verification import ModelVerifier, VerificationIssue, VerificationResult, build_verification_prompt, json_safe
 
 
 class JsonSafetyTests(unittest.TestCase):
+    def test_custom_verifier_instructions_keep_the_verdict_schema(self) -> None:
+        prompt = build_verification_prompt(NodeSpec("n", "work"), {"claims": []}, {"notes": "42"}, system_prompt="CUSTOM-RULE")
+        self.assertTrue(prompt.startswith("CUSTOM-RULE"))
+        self.assertIn('"score"', prompt)
+        self.assertIn("42", prompt)
+
     def test_zero_evidence_limit_is_rejected_before_verifier_dispatch(self) -> None:
         adapter = mock.Mock()
         with self.assertRaisesRegex(ValueError, "max_total_evidence_chars"):
