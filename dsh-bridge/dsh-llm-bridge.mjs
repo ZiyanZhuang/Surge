@@ -143,11 +143,12 @@ export async function* streamToAnthropicSse(chunks, { model }) {
     }
   };
   for await (const chunk of chunks) {
-    if (!chunk || typeof chunk !== 'object') continue;
+    if (!chunk || typeof chunk !== 'object') throw new Error('upstream chunk must be an object');
     if (finished) throw new Error('upstream emitted a chunk after finish');
-    if (chunk.type === 'block-start') continue; // 块在首个 delta 时才真正打开，保持索引连续
+    if (chunk.type === 'block-start' || chunk.type === 'block-end') continue; // 块在首个 delta 时才真正打开，保持索引连续
     if (chunk.type === 'text-delta' || chunk.type === 'reasoning-delta') {
-      const text = typeof chunk.text === 'string' ? chunk.text : '';
+      if (typeof chunk.text !== 'string') throw new Error('upstream text delta must be a string');
+      const text = chunk.text;
       if (text === '') continue;
       const wanted = chunk.type === 'text-delta' ? 'text' : 'thinking';
       if (open !== null && openType !== wanted) {
@@ -199,7 +200,9 @@ export async function* streamToAnthropicSse(chunks, { model }) {
     if (chunk.type === 'finish') {
       finished = true;
       finish = chunk.reason ?? null;
+      continue;
     }
+    throw new Error('upstream emitted an unsupported chunk type');
   }
   // I4：错误/中止不发 message_stop，客户端会把"响应不完整"当成失败。
   const kind = finish && typeof finish === 'object' ? finish.kind : undefined;

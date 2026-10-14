@@ -263,6 +263,18 @@ async function main() {
           for (const chunk of chunks) yield chunk;
         })();
       }
+      if (['bad-text-model', 'bad-reasoning-model', 'null-chunk-model', 'unknown-chunk-model', 'null-after-finish-model'].includes(options.model)) {
+        return (async function* () {
+          yield { type: 'text-delta', index: 0, text: 'partial' };
+          if (options.model === 'bad-text-model') yield { type: 'text-delta', index: 0, text: 42 };
+          if (options.model === 'bad-reasoning-model') yield { type: 'reasoning-delta', index: 1, text: false };
+          if (options.model === 'null-chunk-model') yield null;
+          if (options.model === 'unknown-chunk-model') yield { type: 'unexpected' };
+          yield { type: 'usage', usage: { inputTokens: 1, outputTokens: 1 } };
+          yield { type: 'finish', reason: { kind: 'stop' } };
+          if (options.model === 'null-after-finish-model') yield null;
+        })();
+      }
       if (options.model === 'cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: 100, cacheWriteTokens: 20 } })();
       if (options.model === 'invalid-cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: -1 } })();
       if (options.model === 'no-usage-model') {
@@ -335,6 +347,11 @@ async function main() {
   for (const model of ['missing-finish-model', 'unknown-finish-model', 'duplicate-finish-model', 'late-text-model']) {
     const invalid = await (await post(mappingUrl, token, { ...REQUEST, model })).text();
     check(`${model} fails closed`, eventNames(invalid).includes('error') && !eventNames(invalid).includes('message_stop'));
+  }
+
+  for (const model of ['bad-text-model', 'bad-reasoning-model', 'null-chunk-model', 'unknown-chunk-model', 'null-after-finish-model']) {
+    const invalid = await (await post(mappingUrl, token, { ...REQUEST, model })).text();
+    check(`${model} cannot be silently discarded`, eventNames(invalid).includes('error') && !eventNames(invalid).includes('message_stop'));
   }
 
   // ---- cancellation -----------------------------------------------------
