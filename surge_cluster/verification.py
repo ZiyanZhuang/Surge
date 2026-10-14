@@ -396,6 +396,20 @@ def build_verification_prompt(
     )
 
 
+def _require_budget_usage(usage: Any) -> dict[str, Any]:
+    if not isinstance(usage, Mapping):
+        raise AdapterFailure("worker result must report usage", kind="usage")
+    for key in ("total_tokens", "cost"):
+        value = usage.get(key)
+        try:
+            valid = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)) and value >= 0
+        except OverflowError:
+            valid = False
+        if not valid:
+            raise AdapterFailure(f"usage.{key} must be a finite non-negative number", kind="usage")
+    return dict(usage)
+
+
 class ModelVerifier:
     """用另一个模型调用做独立验证，输出 pass/fail/score/issues。
 
@@ -458,19 +472,6 @@ class ModelVerifier:
         usage = envelope.get("usage")
         return text, usage if isinstance(usage, Mapping) else None
 
-    def _usage_from(self, usage: Mapping[str, Any] | None) -> dict[str, Any] | None:
-        if not isinstance(usage, Mapping):
-            raise AdapterFailure("verifier result must report usage", kind="usage")
-        for key in ("total_tokens", "cost"):
-            value = usage.get(key)
-            try:
-                valid = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(float(value)) and value >= 0
-            except OverflowError:
-                valid = False
-            if not valid:
-                raise AdapterFailure(f"verifier usage.{key} must be a finite non-negative number", kind="usage")
-        return dict(usage)
-
     def verify(
         self,
         node: NodeSpec,
@@ -498,6 +499,7 @@ class ModelVerifier:
                 ),
                 model=getattr(self.adapter, "model", None),
             )
+        _require_budget_usage(envelope.get("usage"))
         prompt = build_verification_prompt(
             node,
             envelope,
@@ -515,7 +517,7 @@ class ModelVerifier:
         )
         result = self.adapter.run(verdict_node, dict(context or {}))
         text, raw_usage = self._raw_text_and_usage(result)
-        usage = self._usage_from(raw_usage)
+        usage = _require_budget_usage(raw_usage)
         model = getattr(self.adapter, "model", None)
         self.calls.append(
             {
@@ -620,23 +622,15 @@ class VerifyingAdapter:
         annotated = dict(envelope)
         annotated["verification"] = report.as_dict()
         # 模型验证器的 token 必须折回本节点的 usage，否则预算结算会少记真实开销。
-        if isinstance(report.usage, Mapping) and isinstance(annotated.get("usage"), Mapping):
-            base = dict(annotated["usage"])
-            extra_tokens = report.usage.get("total_tokens")
-            extra_cost = report.usage.get("cost")
-            if isinstance(extra_tokens, (int, float)) and not isinstance(extra_tokens, bool):
-                current = base.get("total_tokens")
-                base["total_tokens"] = (
-                    float(current) if isinstance(current, (int, float)) and not isinstance(current, bool) else 0.0
-                ) + float(extra_tokens)
-            if isinstance(extra_cost, (int, float)) and not isinstance(extra_cost, bool):
-                current_cost = base.get("cost")
-                base["cost"] = (
-                    float(current_cost)
-                    if isinstance(current_cost, (int, float)) and not isinstance(current_cost, bool)
-                    else 0.0
-                ) + float(extra_cost)
-            annotated["usage"] = base
+        if isinstance(report.usage, Mapping):
+            try:
+                base = _require_budget_usage(annotated.get("usage"))
+                extra = _require_budget_usage(report.usage)
+                for key in ("total_tokens", "cost"):
+                    base[key] += extra[key]
+                annotated["usage"] = _require_budget_usage(base)
+            except AdapterFailure as exc:
+                raise AdapterFailure(str(exc), kind=exc.kind, result=result) from exc
         warnings = envelope.get("warnings")
         if isinstance(warnings, list):
             annotated["warnings"] = list(warnings) + [

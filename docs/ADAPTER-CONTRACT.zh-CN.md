@@ -132,6 +132,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 `VerifyingAdapter` 判定失败时通过上述失败结果携带 worker + verifier 的已知 usage；verifier 调用异常时仍保留已完成 worker 的 usage，不能因验证失败把已知支出记为零。未报告的 provider 用量不会被猜测。
 
+模型验证调用前先检查 worker 的 total_tokens/cost；缺失、负数、布尔、非数字或非有限值不得被验证费用相加“洗白”，也不得先追加一次有成本的验证调用。合并验证费用时同样校验两侧与合计值，不用零替换非法用量。
+
 ## 只读审计面
 
 调度器提供五个只读方法，供验证器、Gate 脚本和外部审计使用；它们不改变任何状态，也不参与调度决策：

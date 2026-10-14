@@ -259,6 +259,18 @@ class VerifyingAdapterWithModelVerifierTests(unittest.TestCase):
         self.assertEqual(result.envelope["usage"]["total_tokens"], 55)
         self.assertAlmostEqual(result.envelope["usage"]["cost"], 0.0004 + 15 / 1000.0 * 0.01)
 
+    def test_model_verification_cannot_launder_invalid_worker_usage(self) -> None:
+        for usage in (None, {}, {"total_tokens": "unknown", "cost": "unknown"}, {"total_tokens": -1, "cost": -0.0001}):
+            with self.subTest(usage=usage):
+                verdict = _VerdictAdapter('{"pass":true,"score":1,"issues":[]}')
+                inner = _WorkerAdapter(_envelope("42", CLAIM, usage=usage), {"notes": "42"})
+                adapter = VerifyingAdapter(inner, verifier=ModelVerifier(verdict))
+                with self.assertRaises(AdapterFailure) as caught:
+                    adapter.run(_node(), {})
+                self.assertEqual(caught.exception.kind, "usage")
+                self.assertEqual(caught.exception.result.envelope["usage"], usage)
+                self.assertEqual(verdict.calls, 0)
+
     def test_fail_policy_raises_on_model_verdict_failure(self) -> None:
         verdict = _VerdictAdapter('{"pass": false, "score": 0.0, "issues": ["unsupported"]}')
         adapter = VerifyingAdapter(self._inner(), verifier=ModelVerifier(verdict), policy="fail")
