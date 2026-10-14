@@ -117,6 +117,8 @@ CLI 覆盖参数的错误属于 usage（退出码 2）：`--timeout` 必须有�
 
 报告路径不能等于输入计划或其文件别名，也不能覆盖持久化 workdir 的 run.sqlite3、SQLite 日志或 run-artifacts 子树；冲突在执行前返回 usage/2，只向 stdout 写错误，不覆盖受保护文件。workdir/report.json 这类相邻报告仍受支持。
 
+报告在同目录临时文件中写入、flush/fsync 后原子替换；写入失败保留旧报告并清理临时文件，替换文件名不会改写其他硬链接的正文。输出失败返回 2，并在 stdout 的原运行报告上附 output 错误，保留本次结果、预算与调用证据。
+
 所有有限数值边界共用相同检查：布尔值、NaN、Infinity 与无法转换为有限 float 的超大整数均拒绝。envelope 返回验证错误，构造参数与 heartbeat/progress/recovery 参数返回 ValueError，不泄漏 float 转换的 OverflowError。
 
 ## 组合顺序：验证在外，隔离在内

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import platform
 import shutil
 import sys
@@ -273,12 +274,18 @@ def main() -> int:
     if output is not None:
         try:
             output.parent.mkdir(parents=True, exist_ok=True)
-            # newline="\n" 让报告在 Windows 上也保持 LF，便于跨平台 diff。
-            output.write_text(
-                json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
-            )
+            fd, temporary = tempfile.mkstemp(prefix=".report-", dir=output.parent)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                    json.dump(report, handle, ensure_ascii=False, indent=2)
+                    handle.write("\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, output)
+            finally:
+                Path(temporary).unlink(missing_ok=True)
         except OSError as exc:
-            code, report = 2, _error_report("output", f"cannot write report: {exc}")
+            code, report = 2, {**report, "error_kind": "output", "error": f"cannot write report: {exc}"}
     # stdout 使用 ASCII 转义，避免在 cp936/GBK 控制台或管道里被写成乱码字节。
     print(json.dumps(report, ensure_ascii=True, indent=2))
     return code

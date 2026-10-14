@@ -111,6 +111,49 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(json.loads(output.read_text(encoding="utf-8"))["result"]["status"], "succeeded")
         self.assertTrue((workdir / "run.sqlite3").is_file())
 
+    def test_partial_report_write_keeps_the_previous_report(self) -> None:
+        self._write_plan()
+        previous = b'{"previous":"complete"}\n'
+        self.output.write_bytes(previous)
+        real_open = io.open
+
+        def failing_open(file, mode="r", *args, **kwargs):
+            handle = real_open(file, mode, *args, **kwargs)
+            if mode != "w":
+                return handle
+
+            def partial_write(text):
+                handle.write(text[:5])
+                handle.flush()
+                raise OSError("injected disk full")
+
+            writer = mock.MagicMock(wraps=handle)
+            writer.__enter__.return_value = writer
+            writer.__exit__.side_effect = handle.__exit__
+            writer.write.side_effect = partial_write
+            return writer
+
+        stdout = io.StringIO()
+        with mock.patch.object(sys, "argv", ["dsh-surge-run", "--plan", str(self.plan), "--output", str(self.output), "--endpoint", self.url]), mock.patch("io.open", side_effect=failing_open), contextlib.redirect_stdout(stdout):
+            code = run_dag.main()
+        self.assertEqual(self.output.read_bytes(), previous)
+        self.assertEqual(code, 2)
+        self.assertEqual(json.loads(stdout.getvalue())["error_kind"], "output")
+        self.assertEqual(json.loads(stdout.getvalue())["result"]["status"], "succeeded")
+        self.assertAlmostEqual(json.loads(stdout.getvalue())["result"]["spent_cost"], 0.0004)
+        self.assertEqual(list(self.directory.glob(".report-*")), [])
+
+    def test_report_replacement_preserves_other_hardlink_contents(self) -> None:
+        self._write_plan()
+        evidence = self.directory / "evidence.txt"
+        evidence.write_text("immutable evidence", encoding="utf-8")
+        self.output.hardlink_to(evidence)
+        with mock.patch.object(sys, "argv", ["dsh-surge-run", "--plan", str(self.plan), "--output", str(self.output), "--dry-run"]), contextlib.redirect_stdout(io.StringIO()):
+            code = run_dag.main()
+        self.assertEqual(code, 0)
+        self.assertEqual(evidence.read_text(encoding="utf-8"), "immutable evidence")
+        self.assertEqual(json.loads(self.output.read_text(encoding="utf-8"))["result"]["status"], "succeeded")
+
     def setUp(self) -> None:
         _FakeHandler.payload = _sse()
         _FakeHandler.response_status = 200
