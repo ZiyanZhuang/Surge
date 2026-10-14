@@ -209,8 +209,19 @@ class RunDagCliTests(unittest.TestCase):
             {"id": "b", "prompt": "b", "wave": 0, "depends_on": ["a"]},
         ]
         self._write_plan(mapping)
-        with self.assertRaises(Exception):
-            self._run("--dry-run")
+        code, report = self._run("--dry-run")
+        self.assertEqual(code, 2)
+        self.assertEqual(report["error_kind"], "plan")
+        self.assertIn("cycle", report["error"])
+
+    def test_later_wave_dependency_returns_a_plan_error(self) -> None:
+        mapping = _plan_mapping()
+        mapping["nodes"][0]["wave"] = 2
+        self._write_plan(mapping)
+        code, report = self._run("--dry-run")
+        self.assertEqual(code, 2)
+        self.assertEqual(report["error_kind"], "plan")
+        self.assertIn("later wave", report["error"])
 
     def test_main_writes_report_and_prints_ascii_json(self) -> None:
         self._write_plan()

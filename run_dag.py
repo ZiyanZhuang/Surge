@@ -191,7 +191,10 @@ def run(argv: list[str] | None = None) -> tuple[int, dict[str, Any], Path]:
     workdir.mkdir(parents=True, exist_ok=True)
     try:
         with DAGScheduler(workdir / "run.sqlite3", max_workers=run_spec.max_workers) as scheduler:
-            scheduler.submit(run_spec, nodes)
+            try:
+                scheduler.submit(run_spec, nodes)
+            except ValueError as exc:
+                return 2, _error_report("plan", str(exc)), args.output
             result = scheduler.execute(adapter)
             nodes_snapshot = scheduler.snapshot(run_spec.id)
             budget = scheduler.budget_snapshot(run_spec.id)

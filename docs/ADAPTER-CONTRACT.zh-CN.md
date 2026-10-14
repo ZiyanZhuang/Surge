@@ -95,6 +95,8 @@ adapter = HttpWorkerAdapter(
 
 执行入口是 `dsh-surge-run`（`run_dag.py`）：读取 JSON 计划，`--dry-run` 离线校验，真实模式必须显式给出 `--endpoint`。`node.max_tokens` 在计划里表示单次调用的预算预留上限（输入+输出），报告会记录这一口径。
 
+计划结构错误与调度器提交时发现的语义错误（包括依赖环、反向波次依赖）均返回退出码 `2` 和 `error_kind="plan"` 的 JSON 报告，不派发 worker。
+
 ## 组合顺序：验证在外，隔离在内
 
 两个可选装饰器保持同一 `WorkerAdapter` 协议，因此可以和任何适配器组合：
