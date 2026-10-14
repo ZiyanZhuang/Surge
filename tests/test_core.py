@@ -671,6 +671,34 @@ class CoreTests(unittest.TestCase):
                 self.assertEqual(future.result(timeout=5).status, "succeeded")
             self.assertEqual(len(first.events("claim-race", "run.completed")), 1)
 
+    def test_concurrent_scheduler_startups_wait_for_wal(self):
+        errors = []
+        for _ in range(10):
+            db_path = self._run_dir() / "shared.sqlite3"
+            barrier = threading.Barrier(8)
+
+            def open_scheduler():
+                barrier.wait(timeout=5)
+                with DAGScheduler(db_path):
+                    pass
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+                futures = [pool.submit(open_scheduler) for _ in range(8)]
+                errors.extend(str(future.exception()) for future in futures if future.exception() is not None)
+        self.assertEqual(errors, [])
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows open-file cleanup semantics")
+    def test_failed_constructor_releases_database_handle(self):
+        db_path = self._run_dir() / "corrupt.sqlite3"
+        db_path.write_bytes(b"not a SQLite file" * 100)
+        errors = []
+        try:
+            DAGScheduler(db_path)
+        except sqlite3.DatabaseError as exc:
+            errors.append(exc)
+        self.assertEqual(len(errors), 1)
+        db_path.rename(db_path.with_name("released.sqlite3"))
+
     def test_execute_setup_failure_releases_owner_claim(self):
         directory = self._run_dir()
         artifact_parent = directory / "run-artifacts"

@@ -511,17 +511,29 @@ class DAGScheduler:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=5.0)
-        self._conn.row_factory = sqlite3.Row
-        # WAL + busy_timeout 让多进程读写至少能有序等待；run owner 仍负责防止重复执行。
-        self._conn.execute("PRAGMA busy_timeout=5000")
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA foreign_keys=ON")
-        self._lock = threading.RLock()
-        self._owner_id = uuid.uuid4().hex
-        self._active_runs: set[str] = set()
-        self._closed = False
-        self._init_db()
-        self._default_workers = max_workers
+        try:
+            self._conn.row_factory = sqlite3.Row
+            # WAL 切换可能立即 BUSY；在原有 5 秒上限内等待其他初始化者。
+            self._conn.execute("PRAGMA busy_timeout=5000")
+            wal_deadline = time.monotonic() + 5.0
+            while True:
+                try:
+                    self._conn.execute("PRAGMA journal_mode=WAL")
+                    break
+                except sqlite3.OperationalError as exc:
+                    if str(exc) != "database is locked" or time.monotonic() >= wal_deadline:
+                        raise
+                    time.sleep(0.01)
+            self._conn.execute("PRAGMA foreign_keys=ON")
+            self._lock = threading.RLock()
+            self._owner_id = uuid.uuid4().hex
+            self._active_runs: set[str] = set()
+            self._closed = False
+            self._init_db()
+            self._default_workers = max_workers
+        except BaseException:
+            self._conn.close()
+            raise
 
     def __enter__(self) -> "DAGScheduler":
         return self
