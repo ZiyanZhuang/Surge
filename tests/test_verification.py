@@ -24,6 +24,14 @@ from surge_cluster import (
 from surge_cluster.verification import json_safe
 
 
+class JsonSafetyTests(unittest.TestCase):
+    def test_deep_values_produce_an_explicit_error(self) -> None:
+        nested = []
+        for _ in range(20000):
+            nested = [nested]
+        self.assertIn("error", json_safe({"extra": nested}))
+
+
 def _envelope(answer: str, claims: list[dict[str, Any]], warnings: list[str] | None = None) -> dict[str, Any]:
     return {
         "answer": answer,

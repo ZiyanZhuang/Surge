@@ -95,6 +95,23 @@ CLAIM = [{"id": "c1", "text": "the measured value is 42", "evidence_refs": ["not
 
 
 class ModelVerifierUnitTests(unittest.TestCase):
+    def test_pathological_verdicts_are_unverified_and_retain_usage(self) -> None:
+        texts = [
+            '{"pass":true,"score":' + "1" + "0" * 400 + ',"issues":[]}',
+            '{"pass":true,"score":' + "1" + "0" * 5000 + ',"issues":[]}',
+            '{"pass":true,"score":1,"issues":[],"extra":' + "[" * 20000 + "0" + "]" * 20000 + '}',
+        ]
+        for text in texts:
+            with self.subTest(length=len(text)):
+                verdict, problems = parse_verifier_verdict(text)
+                self.assertIsNone(verdict)
+                self.assertTrue(problems)
+                adapter = _VerdictAdapter(text)
+                report = ModelVerifier(adapter).verify(_node(), _envelope("42", CLAIM), own_artifacts={"notes": "42"})
+                self.assertFalse(report.passed)
+                self.assertEqual(report.issues[0].code, "verifier_output_invalid")
+                self.assertEqual(report.usage["total_tokens"], 15)
+
     def test_concurrent_verdicts_and_usage_stay_bound_to_each_result(self) -> None:
         class ConcurrentAdapter:
             model = "concurrent-verifier"
@@ -122,6 +139,15 @@ class ModelVerifierUnitTests(unittest.TestCase):
         adapter = _WorkerAdapter(
             _envelope("0.9", [], usage={"total_tokens": 15, "cost": 0.25}),
             {"model-response": json.dumps({"text": text, "usage": {"input_tokens": 10, "output_tokens": 5}})},
+        )
+        report = ModelVerifier(adapter).verify(_node(), _envelope("42", CLAIM), own_artifacts={"notes": "42"})
+        self.assertTrue(report.passed)
+        self.assertEqual(report.usage["cost"], 0.25)
+
+    def test_unparseable_response_artifact_uses_the_returned_answer(self) -> None:
+        adapter = _WorkerAdapter(
+            _envelope('{"pass":true,"score":1,"issues":[]}', [], usage={"total_tokens": 15, "cost": 0.25}),
+            {"model-response": "[" * 20000 + "0" + "]" * 20000},
         )
         report = ModelVerifier(adapter).verify(_node(), _envelope("42", CLAIM), own_artifacts={"notes": "42"})
         self.assertTrue(report.passed)

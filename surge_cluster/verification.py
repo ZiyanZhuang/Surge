@@ -304,8 +304,7 @@ def _verdict_shape_issues(payload: Any) -> tuple[dict[str, Any] | None, list[str
     if (
         isinstance(score, bool)
         or not isinstance(score, (int, float))
-        or not math.isfinite(float(score))
-        or not 0 <= float(score) <= 1
+        or not 0 <= score <= 1
     ):
         problems.append("verdict.score must be a number between 0 and 1")
     raw_issues = payload.get("issues")
@@ -338,7 +337,7 @@ def parse_verifier_verdict(text: str) -> tuple[dict[str, Any] | None, list[str]]
     for candidate in candidates:
         try:
             payload = json.loads(candidate)
-        except json.JSONDecodeError as exc:
+        except (ValueError, RecursionError) as exc:
             last_problems = [f"verifier output is not valid JSON: {exc}"]
             continue
         verdict, problems = _verdict_shape_issues(payload)
@@ -466,7 +465,7 @@ class ModelVerifier:
         if isinstance(raw, str):
             try:
                 response = json.loads(raw)
-            except ValueError:
+            except (ValueError, RecursionError):
                 response = None
             if isinstance(response, Mapping) and isinstance(response.get("text"), str):
                 text = response["text"]
@@ -838,5 +837,5 @@ def json_safe(value: Any) -> Any:
     """把报告转成可 JSON 序列化结构；失败时返回可诊断的占位。"""
     try:
         return json.loads(json.dumps(value, ensure_ascii=False, allow_nan=False))
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, RecursionError) as exc:
         return {"error": f"not JSON serializable: {exc}"}

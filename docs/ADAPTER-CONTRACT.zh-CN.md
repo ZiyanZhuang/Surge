@@ -144,6 +144,8 @@ terminate/kill 抛出 OS 错误或有界等待后子进程仍存活时，隔离�
 
 `ModelVerifier` 只读取本次返回结果：原始 verdict 从该结果的 `model-response` artifact（若含完整 text）或 envelope.answer 获取；token/cost 来自该 envelope 的合法 usage，不读取共享 `last_response`/`calls[-1]`，也不重新按 adapter 单价估算已报告成本。缺失或非法 usage 失败。
 
+verdict JSON 超过解析深度/整数限制，或 score 超出 [0,1] 时，形成 `verifier_output_invalid` 的未通过结论并保留验证调用 usage，不能让解析/浮点转换异常抹掉验证费用。
+
 `VerifyingAdapter` 判定失败时通过上述失败结果携带 worker + verifier 的已知 usage；verifier 调用异常时仍保留已完成 worker 的 usage，不能因验证失败把已知支出记为零。未报告的 provider 用量不会被猜测。
 
 模型验证调用前先检查 worker 的 total_tokens/cost；缺失、负数、布尔、非数字或非有限值不得被验证费用相加“洗白”，也不得先追加一次有成本的验证调用。合并验证费用时同样校验两侧与合计值，不用零替换非法用量。
