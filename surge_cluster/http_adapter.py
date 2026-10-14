@@ -350,11 +350,10 @@ class HttpWorkerAdapter:
     def run(self, node: NodeSpec, context: Mapping[str, Any]) -> WorkerResult:
         if _is_cancelled(context):
             raise AdapterFailure("adapter cancelled before dispatch", kind="cancelled", retryable=False)
+        request_timeout = min(float(node.timeout_seconds), self.timeout)
         heartbeat = context.get("heartbeat") if isinstance(context, Mapping) else None
         if callable(heartbeat):
-            # 租约至少覆盖本次请求的墙钟时间，避免请求进行中被判为过期。
-            lease = min(float(node.timeout_seconds), self.timeout)
-            if heartbeat(lease) is False:
+            if heartbeat(request_timeout) is False:
                 raise AdapterFailure(
                     "lease heartbeat rejected; attempt is no longer current",
                     kind="cancelled",
@@ -369,7 +368,7 @@ class HttpWorkerAdapter:
                 self.url,
                 self.model,
                 node.prompt,
-                self.timeout,
+                request_timeout,
                 system_prompt=self.system_prompt,
                 max_output_tokens=request_max_tokens,
                 max_response_bytes=self.max_response_bytes,

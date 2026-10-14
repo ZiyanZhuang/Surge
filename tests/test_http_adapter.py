@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import tempfile
 import threading
+import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -27,6 +28,7 @@ from surge_cluster import (
 
 
 class _FakeHandler(BaseHTTPRequestHandler):
+    delay = 0.0
     payload = b""
     response_status = 200
     response_type = "text/event-stream"
@@ -38,11 +40,15 @@ class _FakeHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("content-length", "0"))
         cls.received = json.loads(self.rfile.read(length).decode("utf-8"))
         cls.request_count += 1
-        self.send_response(cls.response_status)
-        self.send_header("content-type", cls.response_type)
-        self.send_header("content-length", str(len(cls.payload)))
-        self.end_headers()
-        self.wfile.write(cls.payload)
+        time.sleep(cls.delay)
+        try:
+            self.send_response(cls.response_status)
+            self.send_header("content-type", cls.response_type)
+            self.send_header("content-length", str(len(cls.payload)))
+            self.end_headers()
+            self.wfile.write(cls.payload)
+        except OSError:
+            pass
 
     def log_message(self, *_args: object) -> None:
         return
@@ -90,6 +96,7 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(_FakeHandler.request_count, 0)
 
     def setUp(self) -> None:
+        _FakeHandler.delay = 0.0
         _FakeHandler.payload = _sse()
         _FakeHandler.response_status = 200
         _FakeHandler.response_type = "text/event-stream"
@@ -164,6 +171,14 @@ class HttpAdapterTests(unittest.TestCase):
         result, _ = self._run(self._adapter(), max_tokens=100)
         self.assertEqual(result.status, "succeeded")
         self.assertEqual(_FakeHandler.received["max_tokens"], 100)
+
+    def test_node_timeout_caps_the_http_socket_timeout(self) -> None:
+        _FakeHandler.delay = 0.2
+        adapter = self._adapter(timeout=2)
+        with self.assertRaises(AdapterFailure) as caught:
+            adapter.run(NodeSpec("n", "work", timeout_seconds=0.05), {})
+        self.assertEqual(caught.exception.kind, "transport")
+        self.assertEqual(adapter.calls[-1]["kind"], "transport")
 
     def test_request_respects_policy_ceiling_below_node_limit(self) -> None:
         result, _ = self._run(self._adapter(max_output_tokens=500), max_tokens=4000)

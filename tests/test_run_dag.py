@@ -11,6 +11,7 @@ import json
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,6 +22,7 @@ import run_dag
 
 
 class _FakeHandler(BaseHTTPRequestHandler):
+    delay = 0.0
     payload = b""
     response_status = 200
     response_type = "text/event-stream"
@@ -30,11 +32,15 @@ class _FakeHandler(BaseHTTPRequestHandler):
         cls = self.__class__
         length = int(self.headers.get("content-length", "0"))
         cls.received = json.loads(self.rfile.read(length).decode("utf-8"))
-        self.send_response(cls.response_status)
-        self.send_header("content-type", cls.response_type)
-        self.send_header("content-length", str(len(cls.payload)))
-        self.end_headers()
-        self.wfile.write(cls.payload)
+        time.sleep(cls.delay)
+        try:
+            self.send_response(cls.response_status)
+            self.send_header("content-type", cls.response_type)
+            self.send_header("content-length", str(len(cls.payload)))
+            self.end_headers()
+            self.wfile.write(cls.payload)
+        except OSError:
+            pass
 
     def log_message(self, *_args: object) -> None:
         return
@@ -155,6 +161,7 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(json.loads(self.output.read_text(encoding="utf-8"))["result"]["status"], "succeeded")
 
     def setUp(self) -> None:
+        _FakeHandler.delay = 0.0
         _FakeHandler.payload = _sse()
         _FakeHandler.response_status = 200
         _FakeHandler.response_type = "text/event-stream"
@@ -217,6 +224,16 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertEqual(report["error_kind"], "usage")
         self.assertIn("--endpoint", report["error"])
+
+    def test_node_timeout_reaches_the_http_transport(self) -> None:
+        mapping = _plan_mapping()
+        for node in mapping["nodes"]:
+            node.update(timeout_seconds=0.05, max_attempts=1)
+        self._write_plan(mapping)
+        _FakeHandler.delay = 0.2
+        code, report = self._run("--endpoint", self.url)
+        self.assertEqual(code, 1)
+        self.assertEqual(report["adapter_calls"][0]["kind"], "transport")
 
     def test_rejected_completed_response_still_settles_cost(self) -> None:
         mapping = _plan_mapping()

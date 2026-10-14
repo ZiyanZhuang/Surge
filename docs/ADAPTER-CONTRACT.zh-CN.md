@@ -97,6 +97,7 @@ adapter = HttpWorkerAdapter(
 - 本次请求的 `max_tokens` 取 `min(max_output_tokens, node.max_tokens)`；provider 报告的 `output_tokens` 超过该值时 fail-closed；
 - 派发前检查 `should_stop()`，派发前与返回后都不在有取消信号时提交结果；
 - 调用前用 `heartbeat()` 把租约延长到 `min(node.timeout_seconds, timeout)`，保留亚秒上限，不强制抬到 1 秒；租约被拒即失败；
+- 实际 HTTP socket timeout 使用相同较小值，直接调用 adapter 与通过 CLI 调用都遵守节点上限；urllib socket timeout 仍不等于强制墙钟终止，需要硬隔离时使用 IsolatedAdapter；
 - 失败抛出 `AdapterFailure`，带 `kind`（`transport`/`http`/`sse`/`usage`/`output-limit`/`response-size`/`content-type`/`empty-output`/`empty-answer`/`cancelled`）和 `retryable`；调度器当前仍按 `max_attempts` 重试任何异常，尚未按 kind 分流；
 - 调用记录 `adapter.calls` 只保存 node id、状态、usage、事件数、输出 sha256 和耗时，不保存 prompt 正文与凭据；
 - 响应超过 `max_artifact_bytes` 时保存摘要与摘要哈希，不做静默截断，并在 envelope 的 `warnings` 中标注。
