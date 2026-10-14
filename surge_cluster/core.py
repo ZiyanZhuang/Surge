@@ -1623,7 +1623,13 @@ class DAGScheduler:
                             "read_artifact": artifact_store.read_text,
                         }
                         dispatch_info["context"] = context
-                        future = executor.submit(adapter.run, node, context)
+                        def run_worker(node: NodeSpec = node, context: Mapping[str, Any] = context, info: dict[str, Any] = dispatch_info) -> WorkerResult:
+                            try:
+                                return adapter.run(node, context)
+                            finally:
+                                info["finished_at"] = time.time()
+
+                        future = executor.submit(run_worker)
                         active[future] = dispatch_info
                         dispatched_by_stage[stage_name] = dispatched_by_stage.get(stage_name, 0) + 1
                         dispatched_value_by_stage[stage_name] = dispatched_value_by_stage.get(stage_name, 0.0) + max(0.0, node.incremental_value)
@@ -1647,7 +1653,7 @@ class DAGScheduler:
                             # 超时 attempt 已经失败；这里只回收已经自然结束的旧线程，
                             # 绝不把迟到结果提交为成功。
                             continue
-                        if time.time() >= info["deadline"]:
+                        if info.get("finished_at", time.time()) >= info["deadline"]:
                             info["cancel_event"].set()
                             info["timed_out"] = True
                             self._fail_attempt(run_id, info, "worker lease timeout", events)
@@ -1656,7 +1662,7 @@ class DAGScheduler:
                     if active:
                         now = time.time()
                         for future, info in list(active.items()):
-                            if now >= info["deadline"] and not info.get("timed_out"):
+                            if now >= info["deadline"] and not info.get("timed_out") and info.get("finished_at", float("inf")) >= info["deadline"]:
                                 # Python 线程无法被强制终止：发出协作式取消，但保留
                                 # future 占用调度槽位直到自然结束。这样重试不会与旧调用
                                 # 重叠，也不会突破 max_workers/route 并发；需要硬超时请用进程。

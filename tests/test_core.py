@@ -6,6 +6,7 @@ import threading
 import time
 import unittest
 import uuid
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -506,6 +507,29 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(adapter.calls, 2)
             self.assertLess(elapsed, 0.50)
             self.assertEqual(scheduler.snapshot("timeout")[0]["attempt_count"], 2)
+
+    def test_completed_worker_is_not_timed_out_by_late_observation(self):
+        original_wait = concurrent.futures.wait
+        for hide_done in (False, True):
+            with self.subTest(hide_done=hide_done):
+                delayed = False
+
+                def delayed_wait(*args, **kwargs):
+                    nonlocal delayed
+                    done, pending = original_wait(*args, **kwargs)
+                    if done and not delayed:
+                        delayed = True
+                        time.sleep(0.08)
+                        if hide_done:
+                            return set(), pending | done
+                    return done, pending
+
+                directory = self._run_dir()
+                with self.scheduler(directory) as scheduler:
+                    scheduler.submit(RunSpec("observe"), [NodeSpec("n", "work", max_attempts=1, timeout_seconds=0.05)])
+                    with mock.patch("surge_cluster.core.concurrent.futures.wait", side_effect=delayed_wait):
+                        result = scheduler.execute(CountingAdapter())
+                    self.assertEqual(result.status, "succeeded")
 
     def test_deadline_cas_failure_settles_attempt_and_reservation(self):
         class SlowEnvelope(dict):
