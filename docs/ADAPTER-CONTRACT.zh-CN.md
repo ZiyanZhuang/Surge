@@ -125,6 +125,8 @@ CLI 覆盖参数的错误属于 usage（退出码 2）：`--timeout` 必须有�
 
 工作目录无法创建、SQLite 损坏或 schema 版本不兼容等状态初始化失败，返回退出码 2 和 `error_kind="state"` 的 JSON 报告，不派发 worker，保留调用者指定的状态文件。临时目录创建失败不尝试清理未创建的路径。
 
+使用非占位 API key 的 HTTP 错误不记录服务端正文，避免 JSON 转义或其他编码形式回显凭据；保留 HTTP 状态、错误类型和 retryable。默认 local 占位请求仍保留有界错误摘要。
+
 报告路径不能等于输入计划或其文件别名，也不能覆盖持久化 workdir 的 run.sqlite3、SQLite 日志或 run-artifacts 子树；冲突在执行前返回 usage/2，只向 stdout 写错误，不覆盖受保护文件。workdir/report.json 这类相邻报告仍受支持。
 
 报告在同目录临时文件中写入、flush/fsync 后原子替换；写入失败保留旧报告并清理临时文件，替换文件名不会改写其他硬链接的正文。输出失败返回 2，并在 stdout 的原运行报告上附 output 错误，保留本次结果、预算与调用证据。

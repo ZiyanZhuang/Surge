@@ -539,6 +539,21 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertNotIn(key, str(caught.exception))
         self.assertNotIn(key, json.dumps(adapter.calls))
 
+    def test_authenticated_http_errors_do_not_expose_escaped_credentials(self) -> None:
+        _FakeHandler.response_status = 429
+        for key in ('test-auth-"quoted"', "test-auth-\\escaped", "test-auth-\u00e9"):
+            with self.subTest(key=key):
+                _FakeHandler.payload = json.dumps({"error": "rejected credential: " + key}).encode()
+                adapter = self._adapter(api_key=key)
+                with self.assertRaises(AdapterFailure) as caught:
+                    adapter.run(NodeSpec("n", "work"), {})
+                self.assertEqual(caught.exception.kind, "http")
+                self.assertTrue(caught.exception.retryable)
+                self.assertIn("HTTP 429", str(caught.exception))
+                for error in (str(caught.exception), adapter.last_error, adapter.calls[-1]["error"]):
+                    self.assertNotIn(key, error)
+                    self.assertNotIn(json.dumps(key)[1:-1], error)
+
     def test_invalid_api_keys_are_rejected_without_echo_before_dispatch(self) -> None:
         marker = "test-private-header-marker"
         for key in (None, True, b"bytes", marker + "\n", marker + "\r", marker + "\x00", marker + "\t", marker + "\x7f", marker + "\u2603"):

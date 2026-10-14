@@ -257,7 +257,8 @@ def call_messages_endpoint(
         with exc:
             detail = exc.read(2048).decode("utf-8", errors="replace")
         if isinstance(api_key, str) and api_key and api_key != "local":
-            detail = detail.replace(api_key, "[redacted]")
+            # 错误正文可能以 JSON 等形式转义凭据，不能只替换原始键值。
+            detail = "[authenticated response body omitted]"
         retryable = exc.code == 408 or exc.code == 429 or exc.code >= 500
         raise AdapterFailure(
             f"adapter HTTP {exc.code}: {detail}", kind="http", retryable=retryable
