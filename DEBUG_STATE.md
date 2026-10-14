@@ -50,6 +50,7 @@
 | D26 | P1 | Python splitlines 把合法 Unicode 正文拆成协议行，拒绝有效 SSE | 已修复；HTTP/CLI Unicode 回归及全量 220 项通过 |
 | D27 | P1 | 名称别名遮蔽内容 SHA 引用，错误来源或歧义绑定可被验证通过 | 已修复；验证 27 项、核心 45 项、全量 224 项通过 |
 | D28 | P1 | HTTP adapter 将亚秒 node lease 强制延长为 1 秒，违反超时策略 | 已修复；heartbeat 2 项、全量 225 项通过 |
+| D29 | P1 | process.start 失败绕过 finally，泄漏 IPC 且错误计入 started | 已修复；隔离 12 项、全量 226 项通过 |
 
 文档中部分“未来工作”描述与已有 bridge/模型验证实现不一致，待代码与证据核对。
 
@@ -114,6 +115,8 @@
   - 完整回归：224/224（53.484 秒）；Node 42/42、构建与发布验证通过。
 - D28：删除不在契约中的 1 秒下限，心跳严格使用节点/HTTP timeout 的较小值；保留调度器有限正数检查与 cooperative/hard isolation 边界。
   - 完整回归：225/225（54.222 秒）；Node 42/42、构建与发布验证通过。
+- D29：启动与 reader 创建纳入统一 finally；无 PID 的 process 直接 close，不错误 join；成功 start 后才增加统计。spawn 异常标准化并关闭双端 pipe/control，reap 异常也不能跳过 IPC 清理。
+  - 完整回归：226/226（54.866 秒）；Node 42/42、构建与发布验证通过。
 
 ## 假设列表
 

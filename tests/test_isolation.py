@@ -13,6 +13,7 @@ import time
 import unittest
 from pathlib import Path
 from typing import Any, Mapping
+from unittest import mock
 
 from surge_cluster import (
     AdapterFailure,
@@ -123,6 +124,24 @@ def _node(**overrides: Any) -> NodeSpec:
 
 
 class IsolationTests(unittest.TestCase):
+    def test_spawn_failure_closes_resources_and_does_not_count_a_start(self) -> None:
+        isolated = IsolatedAdapter(LocalEchoAdapter())
+        parent, child = isolated._ctx.Pipe(duplex=False)
+        control = mock.Mock()
+        process = mock.Mock()
+        process.pid = None
+        process.start.side_effect = TypeError("cannot pickle worker")
+        process.join.side_effect = AssertionError("cannot join an unstarted process")
+        with mock.patch.object(isolated._ctx, "Pipe", return_value=(parent, child)), mock.patch.object(isolated._ctx, "Queue", return_value=control), mock.patch.object(isolated._ctx, "Process", return_value=process):
+            with self.assertRaises(AdapterFailure) as caught:
+                isolated.run(_node(), {})
+        self.assertEqual(caught.exception.kind, "spawn")
+        self.assertTrue(parent.closed)
+        self.assertTrue(child.closed)
+        process.close.assert_called_once()
+        process.join.assert_not_called()
+        control.close.assert_called_once()
+        self.assertEqual(isolated.stats()["started"], 0)
     def test_timeout_graces_require_finite_numbers(self) -> None:
         for field in ("hard_timeout_grace", "kill_grace"):
             for value in (True, float("nan"), float("inf"), float("-inf"), -1):

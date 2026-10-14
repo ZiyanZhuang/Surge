@@ -194,6 +194,9 @@ class IsolatedAdapter:
         对已 close 的对象再次操作只会抛 ``ValueError``，这里直接视为已完成。
         """
         try:
+            if process.pid is None:
+                process.close()
+                return
             if process.is_alive():
                 process.terminate()
                 process.join(self.kill_grace)
@@ -286,27 +289,35 @@ class IsolatedAdapter:
                 args=(child_conn, control, stop_event, self.adapter, node, forwarded),
                 daemon=True,
             )
-            self._note("started")
-            process.start()
-            child_conn.close()
-            reader = threading.Thread(
-                target=self._drain, args=(control, context, stop_event), daemon=True
-            )
-            reader.start()
+            reader = None
             try:
+                try:
+                    process.start()
+                except Exception as exc:
+                    raise AdapterFailure(f"isolated worker could not start: {exc}", kind="spawn") from exc
+                self._note("started")
+                child_conn.close()
+                reader = threading.Thread(
+                    target=self._drain, args=(control, context, stop_event), daemon=True
+                )
+                reader.start()
                 payload = self._await_result(parent_conn, process, stop_event, should_stop, hard_timeout)
             finally:
                 stop_event.set()
-                self._reap(process)
-                reader.join(timeout=1.0)
                 try:
-                    parent_conn.close()
-                except OSError:
-                    pass
-                try:
-                    control.close()
-                except (OSError, ValueError):
-                    pass
+                    self._reap(process)
+                finally:
+                    if reader is not None and reader.ident is not None:
+                        reader.join(timeout=1.0)
+                    for connection in (parent_conn, child_conn):
+                        try:
+                            connection.close()
+                        except OSError:
+                            pass
+                    try:
+                        control.close()
+                    except (OSError, ValueError):
+                        pass
             if not payload.get("ok"):
                 record = payload.get("adapter_call")
                 if isinstance(record, dict):

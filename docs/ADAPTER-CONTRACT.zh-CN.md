@@ -128,6 +128,8 @@ adapter = VerifyingAdapter(               # 3. 父进程内独立验证，只标
 
 隔离配置 `hard_timeout_grace` 必须是有限非负数，`kill_grace` 必须是有限正数，均拒绝布尔值、NaN 与 Infinity，避免硬超时失效或回收等待异常。
 
+spawn 失败以 `AdapterFailure(kind="spawn")` 返回，不计入成功 started 统计；未启动的 process 不执行 join。父子管道与控制队列均走 finally 清理，即使 reap 失败仍尝试关闭 IPC。
+
 隔离边界同样要求返回 `WorkerResult`，且 `artifacts` 为字符串名称到字符串正文的 mapping；不会把非法 artifact 强转文本或把空列表当成空 mapping。
 
 `ModelVerifier` 只读取本次返回结果：原始 verdict 从该结果的 `model-response` artifact（若含完整 text）或 envelope.answer 获取；token/cost 来自该 envelope 的合法 usage，不读取共享 `last_response`/`calls[-1]`，也不重新按 adapter 单价估算已报告成本。缺失或非法 usage 失败。
