@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import re
-from decimal import Decimal, DecimalException, Underflow, localcontext
+from decimal import Context, Decimal, DecimalException, Underflow, localcontext
 from typing import Any, Mapping
 
 
@@ -55,8 +55,7 @@ def execute_program(program: str) -> dict[str, Any]:
             token = "-1" if token == "m1" else token.replace("_", ".")
         return number(token)
 
-    with localcontext() as ctx:
-        ctx.prec = 40
+    with localcontext(Context(prec=40)) as ctx:
         ctx.traps[Underflow] = True
         while remaining:
             match = STEP.match(remaining)
@@ -112,8 +111,7 @@ def question_prompt(record: Mapping[str, Any]) -> str:
 def compare_answer(computed: str | None, answer: Any) -> dict[str, Any]:
     """比较 FinQA 展示答案；百分号同时支持 ratio 和 percentage program 输出。"""
     try:
-        with localcontext() as ctx:
-            ctx.prec = 40
+        with localcontext(Context(prec=40)) as ctx:
             ctx.traps[Underflow] = True
             actual = number(computed)
             raw = number(answer)
@@ -141,6 +139,7 @@ def check_oracle(computed: str, qa: Mapping[str, Any]) -> dict[str, Any]:
     actual, expected = number(computed), number(qa["exe_ans"])
     # 官方数值通常保留 5 位小数；明确记录容差，不把 answer 自复制当作验证。
     tolerance = Decimal("0.000005")
-    executable_ok = abs(actual - expected) <= tolerance
+    with localcontext(Context(prec=40)):
+        executable_ok = abs(actual - expected) <= tolerance
     return {"ok": executable_ok and answer_check["ok"], "exe_ans_ok": executable_ok,
             "expected_exe_ans": str(expected), "exe_ans_tolerance": str(tolerance), "answer": answer_check}
