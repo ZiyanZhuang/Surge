@@ -155,6 +155,25 @@ class HttpAdapterTests(unittest.TestCase):
         result = HttpWorkerAdapter(self.url, "model").run(NodeSpec("n", "work"), {})
         self.assertEqual(result.envelope["answer"], "Evidence collected successfully.")
 
+    def test_json_resource_limits_preserve_plaintext_fallback(self) -> None:
+        texts = ["[" * 20000 + '"end"' + "]" * 20000]
+        digit_limit = getattr(sys, "get_int_max_str_digits", lambda: 0)()
+        if digit_limit:
+            texts.append("9" * (digit_limit + 1))
+        for text in texts:
+            with self.subTest(chars=len(text)):
+                _FakeHandler.payload = _sse(answer=text)
+                result = HttpWorkerAdapter(self.url, "model").run(NodeSpec("n", "work"), {})
+                self.assertEqual(result.envelope["answer"], text)
+
+    def test_json_resource_limits_in_sse_are_protocol_errors(self) -> None:
+        for data in ("[" * 20000 + "0" + "]" * 20000, "9" * 5000):
+            with self.subTest(chars=len(data)):
+                _FakeHandler.payload = ("event: message_start\ndata: " + data + "\n\n").encode()
+                with self.assertRaises(AdapterFailure) as caught:
+                    self._adapter().run(NodeSpec("n", "work"), {})
+                self.assertEqual(caught.exception.kind, "sse")
+
     def test_numeric_answer_extraction_keeps_unicode_negative_signs(self) -> None:
         for text in ("\u221242", "the result is \u221242", '{"answer":"\u221242"}', '{"answer":"\\u221242"}'):
             with self.subTest(text=text):

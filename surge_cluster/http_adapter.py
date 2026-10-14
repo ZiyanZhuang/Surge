@@ -58,7 +58,7 @@ def extract_json_answer(text: str) -> str | None:
     """从模型输出中取出 JSON ``answer`` 字段；无法解析时返回 None。"""
     try:
         payload = json.loads(text.strip())
-    except json.JSONDecodeError:
+    except (ValueError, RecursionError):
         return None
     if not isinstance(payload, dict):
         return None
@@ -128,7 +128,7 @@ def parse_sse(payload: bytes) -> tuple[str, dict[str, Any] | None, list[str]]:
         if data_lines:
             try:
                 data = json.loads("\n".join(data_lines))
-            except json.JSONDecodeError as exc:
+            except (ValueError, RecursionError) as exc:
                 raise AdapterFailure("adapter SSE contains invalid JSON", kind="sse") from exc
         if event_name:
             if event_name == "error":
