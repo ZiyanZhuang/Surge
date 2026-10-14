@@ -8,6 +8,16 @@ from surge_cluster.finqa import check_oracle, compare_answer, execute_program, n
 
 
 class FinQAOracleTests(unittest.TestCase):
+    def test_arithmetic_underflow_does_not_become_a_zero_answer(self):
+        program = ", ".join(["exp(0.00000001, 10)"] + [f"exp(#{index}, 10)" for index in range(5)])
+        with self.assertRaisesRegex(ValueError, "invalid arithmetic"):
+            execute_program(program)
+
+    def test_tiny_display_tolerance_underflow_cannot_match_zero(self):
+        report = compare_answer("0", "1e-1100000")
+        self.assertFalse(report["ok"])
+        self.assertIn("error", report)
+
     def test_program_results_and_float_labels_accept_scientific_notation(self):
         trace = execute_program("divide(1, 100000000)")
         self.assertTrue(check_oracle(trace["value"], {"answer": "0.00000001", "exe_ans": 1e-8})["ok"])

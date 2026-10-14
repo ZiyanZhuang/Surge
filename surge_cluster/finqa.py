@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import re
-from decimal import Decimal, DecimalException, localcontext
+from decimal import Decimal, DecimalException, Underflow, localcontext
 from typing import Any, Mapping
 
 
@@ -57,6 +57,7 @@ def execute_program(program: str) -> dict[str, Any]:
 
     with localcontext() as ctx:
         ctx.prec = 40
+        ctx.traps[Underflow] = True
         while remaining:
             match = STEP.match(remaining)
             if match is None or len(values) >= 32:
@@ -111,20 +112,23 @@ def question_prompt(record: Mapping[str, Any]) -> str:
 def compare_answer(computed: str | None, answer: Any) -> dict[str, Any]:
     """比较 FinQA 展示答案；百分号同时支持 ratio 和 percentage program 输出。"""
     try:
-        actual = number(computed)
-        raw = number(answer)
-        candidates = [(raw, "direct")]
-        if str(answer).strip().endswith("%"):
-            candidates.append((raw / Decimal(100), "ratio"))
-        expected, mode = min(candidates, key=lambda item: abs(actual - item[0]))
-        # gold 的最后一位允许半个单位的舍入误差；不是任意相对容差。
-        tolerance = Decimal(5).scaleb(expected.as_tuple().exponent - 1)
-        return {
-            "ok": abs(actual - expected) <= tolerance,
-            "normalized_gold": str(expected),
-            "tolerance": str(tolerance),
-            "percent_mode": mode,
-        }
+        with localcontext() as ctx:
+            ctx.prec = 40
+            ctx.traps[Underflow] = True
+            actual = number(computed)
+            raw = number(answer)
+            candidates = [(raw, "direct")]
+            if str(answer).strip().endswith("%"):
+                candidates.append((raw / Decimal(100), "ratio"))
+            expected, mode = min(candidates, key=lambda item: abs(actual - item[0]))
+            # gold 的最后一位允许半个单位的舍入误差；不是任意相对容差。
+            tolerance = Decimal(5).scaleb(expected.as_tuple().exponent - 1)
+            return {
+                "ok": abs(actual - expected) <= tolerance,
+                "normalized_gold": str(expected),
+                "tolerance": str(tolerance),
+                "percent_mode": mode,
+            }
     except (ValueError, DecimalException) as exc:
         return {"ok": False, "error": str(exc)}
 
