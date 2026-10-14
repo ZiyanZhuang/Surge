@@ -56,6 +56,7 @@ strict 模式下，`answer`、`claims`、`citations`、`confidence`、`warnings`
 - Adapter 抛出异常：当前 attempt 失败；在 `max_attempts` 未耗尽时有限重试，否则节点为 `failed`，下游为 `blocked`；
 - 若异常为 `AdapterFailure(result=...)`，其中已完成的结果仍接受相同 envelope/预算校验并结算已报告用量，但绝不会提交为成功；失败 envelope 保留用于审计，artifact 绑定不进入下游。隔离层透传这份失败结果。
 - 已返回结果在 artifact 写入、输出校验或隔离序列化阶段失败时，同样结算可确认的费用。无法序列化的隔离输出只携带明确标记的失败投影与 usage，不能因此变成成功；尚未收到的费用不猜测。
+- HTTP 响应已完整且 usage 有效后，即使空输出/答案、输出超限、提取器错误、UTF-8 处理错误或返回后取消，仍通过失败结果结算该适配器单价下的已知费用；不提交 artifact。内部响应处理异常使用 `kind="response"`。无有效 usage 的传输/协议失败不虚构费用。
 - envelope 超过 JSON 递归/整数表示限制或包含不能编码的 UTF-8 时，失败记录为 `persisted="unavailable"`；连 repr 也无法表示时 `repr_sha256` 为 null，不能为生成错误摘要再次中断调度。
 - timeout/cancel 结算时若 worker 已返回，保留该结果的已知费用与失败审计；若结算后才返回，其迟到结果仍按现有 CAS 规则丢弃，不推测未知账单。
 - `cancel()` 对有效租约的 owner 设置取消请求，由执行循环发出停止信号并结算；无有效 owner 时直接结束 running attempt、释放预留。其他连接发起取消也遵循相同规则，避免抢先清空 owner 已收到的费用。

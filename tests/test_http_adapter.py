@@ -162,6 +162,45 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertEqual(result.status, "succeeded")
         self.assertAlmostEqual(result.spent_cost, (10 + 75) / 1000.0 * 0.02, places=9)
 
+    def test_completed_response_rejections_retain_known_cost(self) -> None:
+        def broken_extractor(_text):
+            raise ValueError("cannot extract answer")
+
+        for mode in ("empty-output", "empty-answer", "output-limit", "extractor-error", "unicode"):
+            with self.subTest(mode=mode):
+                _FakeHandler.payload = _sse(answer="" if mode == "empty-output" else "\ud800" if mode == "unicode" else "42")
+                options = {"cost_per_1k_tokens": 0.02}
+                if mode == "empty-answer":
+                    options["answer_extractor"] = lambda _text: None
+                elif mode == "extractor-error":
+                    options["answer_extractor"] = broken_extractor
+                elif mode == "output-limit":
+                    options["max_output_tokens"] = 50
+                elif mode == "unicode":
+                    options["answer_extractor"] = lambda text: text
+                adapter = self._adapter(**options)
+                result, directory = self._run(adapter)
+                self.assertEqual(result.status, "failed")
+                self.assertAlmostEqual(result.spent_cost, 85 / 1000 * 0.02)
+                self.assertFalse(adapter.calls[-1]["ok"])
+                with DAGScheduler(directory / "run.sqlite3") as scheduler:
+                    self.assertEqual(scheduler.artifacts("adapter-run"), [])
+                    self.assertAlmostEqual(scheduler._conn.execute("SELECT cost FROM attempts").fetchone()[0], result.spent_cost)
+
+    def test_cancellation_after_response_carries_known_usage(self) -> None:
+        checks = 0
+
+        def should_stop():
+            nonlocal checks
+            checks += 1
+            return checks > 1
+
+        with self.assertRaises(AdapterFailure) as caught:
+            self._adapter().run(NodeSpec("n", "work"), {"should_stop": should_stop})
+        self.assertEqual(caught.exception.kind, "cancelled")
+        self.assertIsNotNone(caught.exception.result)
+        self.assertAlmostEqual(caught.exception.result.envelope["usage"]["cost"], 85 / 1000 * 0.01)
+
     def test_artifact_records_response_without_prompt_text(self) -> None:
         marker = "UNIQUE-PROMPT-MARKER-8842"
         directory = Path(tempfile.mkdtemp(prefix="surge-http-adapter-"))

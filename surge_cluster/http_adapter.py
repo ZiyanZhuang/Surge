@@ -180,6 +180,7 @@ def require_usage(usage: Mapping[str, Any] | None, max_output_tokens: int) -> di
             f"{max_output_tokens}; failing closed",
             kind="output-limit",
             retryable=False,
+            result=WorkerResult({"usage": {"total_tokens": sum(result.values())}}),
         )
     return result
 
@@ -275,7 +276,8 @@ def call_messages_endpoint(
     normalized_usage = require_usage(usage, int(max_output_tokens))
     if not text.strip():
         raise AdapterFailure(
-            "adapter SSE contained no text output", kind="empty-output", retryable=False
+            "adapter SSE contained no text output", kind="empty-output", retryable=False,
+            result=WorkerResult({"usage": {"total_tokens": sum(normalized_usage.values())}}),
         )
     return {
         "http_status": status,
@@ -362,6 +364,7 @@ class HttpWorkerAdapter:
         # 请求上限取策略上限与节点上限的较小值，遵守 ADAPTER-CONTRACT 的 max_tokens 政策。
         request_max_tokens = max(1, min(self.max_output_tokens, int(node.max_tokens)))
         started = time.perf_counter()
+        completed = None
         try:
             response = call_messages_endpoint(
                 self.url,
@@ -374,95 +377,86 @@ class HttpWorkerAdapter:
                 api_key=self.api_key,
                 extra_headers=self.extra_headers,
             )
-        except AdapterFailure as exc:
-            self.last_error = str(exc)
-            self._record(
-                node,
-                {
-                    "ok": False,
-                    "kind": exc.kind,
-                    "retryable": exc.retryable,
-                    "error": str(exc),
-                    "elapsed_seconds": round(time.perf_counter() - started, 6),
-                },
-            )
-            raise
-        self.last_response = response
-        self.last_error = None
-        answer = self.answer_extractor(response["text"])
-        if not answer:
-            self.last_error = "adapter output did not contain a usable answer"
-            self._record(
-                node,
-                {
-                    "ok": False,
-                    "kind": "empty-answer",
-                    "retryable": False,
-                    "error": self.last_error,
-                    "elapsed_seconds": round(time.perf_counter() - started, 6),
-                },
-            )
-            raise AdapterFailure(self.last_error, kind="empty-answer", retryable=False)
-        if _is_cancelled(context):
-            # 取消后不提交结果；调度器本身也会拒绝迟到的 commit。
-            self.last_error = "run cancelled while the adapter was in flight"
-            self._record(
-                node,
-                {"ok": False, "kind": "cancelled", "retryable": False, "error": self.last_error},
-            )
-            raise AdapterFailure(self.last_error, kind="cancelled", retryable=False)
+            usage = response["usage"]
+            total_tokens = usage["input_tokens"] + usage["output_tokens"]
+            completed = WorkerResult({"usage": {
+                "total_tokens": total_tokens,
+                "cost": total_tokens / 1000.0 * self.cost_per_1k_tokens,
+            }})
+            self.last_response = response
+            self.last_error = None
+            answer = self.answer_extractor(response["text"])
+            if not answer:
+                raise AdapterFailure("adapter output did not contain a usable answer", kind="empty-answer")
+            if _is_cancelled(context):
+                raise AdapterFailure("run cancelled while the adapter was in flight", kind="cancelled")
 
-        usage = response["usage"]
-        total_tokens = usage["input_tokens"] + usage["output_tokens"]
-        warnings = [self.warning]
-        artifact_text = json.dumps(response, ensure_ascii=False, indent=2)
-        if len(artifact_text.encode("utf-8")) > self.max_artifact_bytes:
-            # 不做静默截断：保存摘要与摘要哈希，完整文本由调用方从 endpoint 侧留存。
-            warnings.append("model response exceeded artifact limit; stored digest summary only")
-            summary = {
-                "artifact_truncated": True,
-                "http_status": response["http_status"],
-                "content_type": response["content_type"],
-                "events": response["events"],
-                "usage": usage,
-                "request_max_tokens": response["request_max_tokens"],
-                "output_budget_policy": response["output_budget_policy"],
-                "output_sha256": hashlib.sha256(response["text"].encode("utf-8")).hexdigest(),
-                "output_chars": len(response["text"]),
-                "raw_response_sha256": hashlib.sha256(artifact_text.encode("utf-8")).hexdigest(),
-                "note": "完整响应超过 artifact 上限；这里保存摘要与哈希，未静默保存截断文本。",
-            }
-            artifact_text = json.dumps(summary, ensure_ascii=False, indent=2)
-        self._record(
-            node,
-            {
-                "ok": True,
-                "kind": "ok",
-                "usage": usage,
-                "http_status": response["http_status"],
-                "events": len(response["events"]),
-                "request_max_tokens": response["request_max_tokens"],
-                "output_sha256": hashlib.sha256(response["text"].encode("utf-8")).hexdigest(),
-                "elapsed_seconds": round(time.perf_counter() - started, 6),
-            },
-        )
-        return WorkerResult(
-            envelope={
-                "answer": answer,
-                "claims": [
-                    {
-                        "id": "model-answer",
-                        "text": answer,
-                        "evidence_refs": [ARTIFACT_NAME],
-                    }
-                ],
-                "citations": [],
-                "confidence": 0.5,
-                "warnings": warnings,
-                "usage": {
-                    "total_tokens": total_tokens,
-                    "cost": total_tokens / 1000.0 * self.cost_per_1k_tokens,
+            warnings = [self.warning]
+            artifact_text = json.dumps(response, ensure_ascii=False, indent=2)
+            if len(artifact_text.encode("utf-8")) > self.max_artifact_bytes:
+                # 不做静默截断：保存摘要与摘要哈希，完整文本由调用方从 endpoint 侧留存。
+                warnings.append("model response exceeded artifact limit; stored digest summary only")
+                summary = {
+                    "artifact_truncated": True,
+                    "http_status": response["http_status"],
+                    "content_type": response["content_type"],
+                    "events": response["events"],
+                    "usage": usage,
+                    "request_max_tokens": response["request_max_tokens"],
+                    "output_budget_policy": response["output_budget_policy"],
+                    "output_sha256": hashlib.sha256(response["text"].encode("utf-8")).hexdigest(),
+                    "output_chars": len(response["text"]),
+                    "raw_response_sha256": hashlib.sha256(artifact_text.encode("utf-8")).hexdigest(),
+                    "note": "完整响应超过 artifact 上限；这里保存摘要与哈希，未静默保存截断文本。",
+                }
+                artifact_text = json.dumps(summary, ensure_ascii=False, indent=2)
+            self._record(
+                node,
+                {
+                    "ok": True,
+                    "kind": "ok",
+                    "usage": usage,
+                    "http_status": response["http_status"],
+                    "events": len(response["events"]),
+                    "request_max_tokens": response["request_max_tokens"],
+                    "output_sha256": hashlib.sha256(response["text"].encode("utf-8")).hexdigest(),
+                    "elapsed_seconds": round(time.perf_counter() - started, 6),
                 },
-            },
-            artifacts={ARTIFACT_NAME: artifact_text},
-        )
+            )
+            return WorkerResult(
+                envelope={
+                    "answer": answer,
+                    "claims": [
+                        {
+                            "id": "model-answer",
+                            "text": answer,
+                            "evidence_refs": [ARTIFACT_NAME],
+                        }
+                    ],
+                    "citations": [],
+                    "confidence": 0.5,
+                    "warnings": warnings,
+                    "usage": completed.envelope["usage"],
+                },
+                artifacts={ARTIFACT_NAME: artifact_text},
+            )
+        except Exception as exc:
+            failure = exc if isinstance(exc, AdapterFailure) else AdapterFailure(
+                f"adapter response processing failed: {exc}", kind="response", retryable=False
+            )
+            if failure.result is None:
+                failure.result = completed
+            self.last_error = str(failure)
+            self._record(node, {
+                "ok": False, "kind": failure.kind, "retryable": failure.retryable,
+                "error": str(failure), "elapsed_seconds": round(time.perf_counter() - started, 6),
+            })
+            if failure.result is not None:
+                envelope = dict(failure.result.envelope)
+                budget_usage = dict(envelope["usage"])
+                budget_usage["cost"] = budget_usage["total_tokens"] / 1000.0 * self.cost_per_1k_tokens
+                envelope["usage"] = budget_usage
+                failure.result = WorkerResult(envelope, failure.result.artifacts)
+            if failure is exc:
+                raise
+            raise failure from exc

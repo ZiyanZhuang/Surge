@@ -135,6 +135,18 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(report["error_kind"], "usage")
         self.assertIn("--endpoint", report["error"])
 
+    def test_rejected_completed_response_still_settles_cost(self) -> None:
+        mapping = _plan_mapping()
+        for node in mapping["nodes"]:
+            node["max_attempts"] = 1
+        self._write_plan(mapping)
+        code, report = self._run("--endpoint", self.url, "--max-output-tokens", "4")
+        self.assertEqual(code, 1)
+        self.assertEqual(report["result"]["failed"], ["scout"])
+        self.assertEqual(report["result"]["blocked"], ["synth"])
+        self.assertAlmostEqual(report["result"]["spent_cost"], 20 / 1000 * 0.01)
+        self.assertEqual(report["adapter_calls"][0]["kind"], "output-limit")
+
     def test_real_mode_runs_through_the_http_adapter(self) -> None:
         self._write_plan()
         code, report = self._run("--endpoint", self.url, "--model", "fake-model")
