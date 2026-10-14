@@ -275,6 +275,20 @@ async function main() {
           if (options.model === 'null-after-finish-model') yield null;
         })();
       }
+      if (['usage-repaired-model', 'usage-input-decrease-model', 'usage-output-decrease-model', 'usage-cache-decrease-model', 'usage-increase-model'].includes(options.model)) {
+        return (async function* () {
+          yield { type: 'text-delta', index: 0, text: 'answer' };
+          const first = { inputTokens: 5, outputTokens: 5, cacheReadTokens: 10 };
+          if (options.model === 'usage-repaired-model') first.inputTokens = false;
+          yield { type: 'usage', usage: first };
+          const second = { inputTokens: 6, outputTokens: 6 };
+          if (options.model === 'usage-input-decrease-model') second.inputTokens = 4;
+          if (options.model === 'usage-output-decrease-model') second.outputTokens = 4;
+          if (options.model === 'usage-cache-decrease-model') second.cacheReadTokens = 9;
+          yield { type: 'usage', usage: second };
+          yield { type: 'finish', reason: { kind: 'stop' } };
+        })();
+      }
       if (options.model === 'cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: 100, cacheWriteTokens: 20 } })();
       if (options.model === 'invalid-cache-model') return textStream({ usage: { inputTokens: 3, outputTokens: 2, cacheReadTokens: -1 } })();
       if (options.model === 'no-usage-model') {
@@ -335,7 +349,7 @@ async function main() {
   const cachedUsage = dataFrames(cached).find((item) => item.type === 'message_delta')?.usage;
   check('disjoint cache input counts are preserved', JSON.stringify(cachedUsage) === '{"input_tokens":3,"output_tokens":2,"cache_read_input_tokens":100,"cache_creation_input_tokens":20}');
   const invalidCache = await (await post(mappingUrl, token, { ...REQUEST, model: 'invalid-cache-model' })).text();
-  check('invalid cache counts cannot produce valid billed usage', dataFrames(invalidCache).find((item) => item.type === 'message_delta')?.usage === undefined);
+  check('invalid cache counts fail closed', eventNames(invalidCache).includes('error') && !eventNames(invalidCache).includes('message_stop'));
 
   const noUsage = await (await post(mappingUrl, token, { ...REQUEST, model: 'no-usage-model' })).text();
   const noUsageDelta = dataFrames(noUsage).find((item) => item.type === 'message_delta');
@@ -343,7 +357,7 @@ async function main() {
   check('missing usage still ends with message_stop', eventNames(noUsage).includes('message_stop'));
   check('message_start never fabricates usage', dataFrames(noUsage).find((item) => item.type === 'message_start').message.usage === undefined);
   const invalidUsage = await (await post(mappingUrl, token, { ...REQUEST, model: 'invalid-usage-model' })).text();
-  check('invalid upstream usage is not coerced into valid counts', dataFrames(invalidUsage).find((item) => item.type === 'message_delta').usage === undefined);
+  check('invalid upstream usage fails closed', eventNames(invalidUsage).includes('error') && !eventNames(invalidUsage).includes('message_stop'));
   for (const model of ['missing-finish-model', 'unknown-finish-model', 'duplicate-finish-model', 'late-text-model']) {
     const invalid = await (await post(mappingUrl, token, { ...REQUEST, model })).text();
     check(`${model} fails closed`, eventNames(invalid).includes('error') && !eventNames(invalid).includes('message_stop'));
@@ -353,6 +367,14 @@ async function main() {
     const invalid = await (await post(mappingUrl, token, { ...REQUEST, model })).text();
     check(`${model} cannot be silently discarded`, eventNames(invalid).includes('error') && !eventNames(invalid).includes('message_stop'));
   }
+
+  for (const model of ['usage-repaired-model', 'usage-input-decrease-model', 'usage-output-decrease-model', 'usage-cache-decrease-model']) {
+    const invalid = await (await post(mappingUrl, token, { ...REQUEST, model })).text();
+    check(`${model} cannot launder earlier usage`, eventNames(invalid).includes('error') && !eventNames(invalid).includes('message_stop'));
+  }
+  const growingUsage = await (await post(mappingUrl, token, { ...REQUEST, model: 'usage-increase-model' })).text();
+  const finalGrowingUsage = dataFrames(growingUsage).find((item) => item.type === 'message_delta')?.usage;
+  check('increasing usage preserves previously reported cache input', eventNames(growingUsage).includes('message_stop') && finalGrowingUsage?.cache_read_input_tokens === 10 && finalGrowingUsage?.output_tokens === 6);
 
   // ---- cancellation -----------------------------------------------------
   console.log('cancellation');

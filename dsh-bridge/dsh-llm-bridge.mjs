@@ -190,11 +190,15 @@ export async function* streamToAnthropicSse(chunks, { model }) {
       continue;
     }
     if (chunk.type === 'usage') {
-      const counts = { input_tokens: chunk.usage?.inputTokens, output_tokens: chunk.usage?.outputTokens };
+      const counts = { ...usage, input_tokens: chunk.usage?.inputTokens, output_tokens: chunk.usage?.outputTokens };
       for (const [source, target] of [['cacheReadTokens', 'cache_read_input_tokens'], ['cacheWriteTokens', 'cache_creation_input_tokens']]) {
         if (chunk.usage?.[source] !== undefined) counts[target] = chunk.usage[source];
       }
-      usage = Object.values(counts).every((value) => Number.isSafeInteger(value) && value >= 0) ? counts : null;
+      if (!Object.values(counts).every((value) => Number.isSafeInteger(value) && value >= 0)
+          || Object.entries(usage ?? {}).some(([key, previous]) => counts[key] < previous)) {
+        throw new Error('upstream usage must contain non-negative cumulative safe integers');
+      }
+      usage = counts;
       continue;
     }
     if (chunk.type === 'finish') {

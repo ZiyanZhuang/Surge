@@ -36,10 +36,12 @@ fail-closed 规则。换一种自定义线协议会把那套校验逻辑复制�
 |---|---|
 | I1 | 只监听 `127.0.0.1`，并拒绝非回环来源 |
 | I2 | 每次请求必须带 `x-api-key` 或 `Authorization: Bearer`，且等于 token 文件内容 |
-| I3 | 上游 usage 缺失或不是非负安全整数时不伪造计数；起始帧不填写占位 usage |
+| I3 | 上游 usage 缺失时不伪造计数；非法或回退计数以 error 失败；起始帧不填写占位 usage |
 | I4 | 上游 `error`/`aborted`、缺失/重复/未知 finish 或 finish 后追加 chunk 均不发 `message_stop`，而以 SSE `error` 失败 |
 | I5 | 并发超过上限返回 HTTP 429，不排队、不静默丢弃 |
 | I6 | 日志不写 prompt、不写 token |
+
+usage 更新必须保持非负安全整数且不回退，先前报告的缓存计数不会因后续省略字段而消失；非法更新不能被后来的合法值覆盖洗白。
 
 上游非对象、未知 chunk 类型或非字符串文本/推理 delta 会以 SSE error 失败，不能通过丢弃坏帧再生成成功消息结束。合法空字符串 delta 可以忽略。
 
