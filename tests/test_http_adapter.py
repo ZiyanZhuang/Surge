@@ -126,6 +126,11 @@ class HttpAdapterTests(unittest.TestCase):
     def test_adapter_is_public_library_api(self) -> None:
         self.assertEqual(HttpWorkerAdapter.__module__, "surge_cluster.http_adapter")
 
+    def test_default_answer_extractor_preserves_plain_text(self) -> None:
+        _FakeHandler.payload = _sse(answer="Evidence collected successfully.")
+        result = HttpWorkerAdapter(self.url, "model").run(NodeSpec("n", "work"), {})
+        self.assertEqual(result.envelope["answer"], "Evidence collected successfully.")
+
     def test_successful_call_produces_valid_envelope_and_artifact(self) -> None:
         result, _ = self._run(self._adapter())
         self.assertEqual(result.status, "succeeded")

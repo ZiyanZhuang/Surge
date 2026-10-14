@@ -37,7 +37,6 @@ from surge_cluster import (
     RunSpec,
     VerifyingAdapter,
     build_provenance,
-    extract_numeric_answer,
     load_plan,
 )
 
@@ -143,7 +142,6 @@ def _build_adapter(args: argparse.Namespace, run_spec: RunSpec):
             cost_per_1k_tokens=(
                 run_spec.cost_per_1k_tokens if args.cost_per_1k_tokens is None else args.cost_per_1k_tokens
             ),
-            answer_extractor=extract_numeric_answer,
             warning="one authorized model call through the CLI; not a capacity or quality claim",
         )
         inner = http_adapter

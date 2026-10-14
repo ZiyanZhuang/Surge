@@ -134,6 +134,15 @@ class RunDagCliTests(unittest.TestCase):
         self.assertEqual(_FakeHandler.received["model"], "fake-model")
         self.assertEqual(_FakeHandler.received["max_tokens"], 2000)
 
+    def test_real_mode_accepts_a_plain_text_answer(self) -> None:
+        _FakeHandler.payload = _sse("Evidence collected successfully.")
+        mapping = _plan_mapping()
+        mapping["nodes"][0]["max_attempts"] = 1
+        self._write_plan(mapping)
+        code, report = self._run("--endpoint", self.url)
+        self.assertEqual(code, 0)
+        self.assertEqual(report["result"]["succeeded"], ["scout", "synth"])
+
     def test_real_mode_reports_failed_node_with_adapter_kind(self) -> None:
         _FakeHandler.payload = _sse()[:-40]
         self._write_plan()

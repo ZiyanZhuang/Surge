@@ -98,6 +98,8 @@ adapter = HttpWorkerAdapter(
 
 执行入口是 `dsh-surge-run`（`run_dag.py`）：读取 JSON 计划，`--dry-run` 离线校验，真实模式必须显式给出 `--endpoint`。`node.max_tokens` 在计划里表示单次调用的预算预留上限（输入+输出），报告会记录这一口径。
 
+通用 CLI 沿用 HttpWorkerAdapter 默认答案提取：优先 JSON answer，否则保留非空纯文本；不会把没有数字的研究回答当成空答案。FinQA 等数值任务可在专用 harness 显式选择数值提取器。
+
 计划结构错误与调度器提交时发现的语义错误（包括依赖环、反向波次依赖）均返回退出码 `2` 和 `error_kind="plan"` 的 JSON 报告，不派发 worker。
 
 读取失败、非法 UTF-8/JSON、错误字段类型与不可表示数值也属于计划错误。schema_version 必须是整数版本号；持久化整数字段限于 SQLite 有符号 64 位范围，超限在提交前拒绝，Python API 与 CLI 都不会留下半个 run。
