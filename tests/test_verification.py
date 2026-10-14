@@ -22,7 +22,7 @@ from surge_cluster import (
     WorkerResult,
     build_provenance,
 )
-from surge_cluster.verification import ModelVerifier, json_safe
+from surge_cluster.verification import ModelVerifier, VerificationIssue, VerificationResult, json_safe
 
 
 class JsonSafetyTests(unittest.TestCase):
@@ -209,6 +209,25 @@ class EvidenceVerifierTests(unittest.TestCase):
 
 
 class VerifyingAdapterTests(unittest.TestCase):
+    def test_explicit_falsey_verifier_is_not_replaced(self) -> None:
+        class DenyVerifier:
+            name = "explicit-deny"
+            called = False
+
+            def __bool__(self):
+                return False
+
+            def verify(self, *args, **kwargs):
+                self.called = True
+                return VerificationResult(self.name, False, 0.0, 0, issues=(VerificationIssue("denied", "supplied verifier denied the result"),))
+
+        verifier = DenyVerifier()
+        adapter = VerifyingAdapter(_StaticAdapter(_envelope("42", [])), verifier=verifier, policy="fail")
+        with self.assertRaises(AdapterFailure) as caught:
+            adapter.run(_node(), {})
+        self.assertTrue(verifier.called)
+        self.assertEqual(caught.exception.result.envelope["verification"]["verifier"], "explicit-deny")
+
     def _inner(self) -> _StaticAdapter:
         return _StaticAdapter(
             _envelope("42", [{"id": "c1", "text": "x", "evidence_refs": ["notes"]}], warnings=["original"]),
@@ -248,6 +267,9 @@ class VerifyingAdapterTests(unittest.TestCase):
             VerifyingAdapter(object())
         with self.assertRaises(ValueError):
             VerifyingAdapter(LocalEchoAdapter(), policy="ignore")
+        for verifier in (False, object(), mock.Mock(spec=["verify"])):
+            with self.subTest(verifier=verifier), self.assertRaises(ValueError):
+                VerifyingAdapter(LocalEchoAdapter(), verifier=verifier)
 
 
 class VerifierSchedulerIntegrationTests(unittest.TestCase):

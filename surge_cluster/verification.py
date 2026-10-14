@@ -576,7 +576,9 @@ class VerifyingAdapter:
         if policy not in {"annotate", "fail"}:
             raise ValueError("policy must be 'annotate' or 'fail'")
         self.inner = inner
-        self.verifier = verifier or EvidenceVerifier()
+        self.verifier = EvidenceVerifier() if verifier is None else verifier
+        if not callable(getattr(self.verifier, "verify", None)) or not isinstance(getattr(self.verifier, "name", None), str) or not self.verifier.name.strip():
+            raise ValueError("verifier must expose verify(...) and a non-empty name")
         self.policy = policy
         self.records: list[dict[str, Any]] = []
 

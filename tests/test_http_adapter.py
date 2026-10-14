@@ -152,6 +152,23 @@ class HttpAdapterTests(unittest.TestCase):
         result = HttpWorkerAdapter(self.url, "model").run(NodeSpec("n", "work"), {})
         self.assertEqual(result.envelope["answer"], "Evidence collected successfully.")
 
+    def test_explicit_falsey_answer_extractor_is_not_replaced(self) -> None:
+        class EmptyExtractor:
+            called = False
+
+            def __bool__(self):
+                return False
+
+            def __call__(self, text):
+                self.called = True
+                return None
+
+        extractor = EmptyExtractor()
+        with self.assertRaises(AdapterFailure) as caught:
+            self._adapter(answer_extractor=extractor).run(NodeSpec("n", "work"), {})
+        self.assertEqual(caught.exception.kind, "empty-answer")
+        self.assertTrue(extractor.called)
+
     def test_unicode_separators_inside_json_text_do_not_split_sse_lines(self) -> None:
         for separator in ("\u0085", "\u2028", "\u2029"):
             with self.subTest(separator=repr(separator)):
@@ -407,6 +424,9 @@ class HttpAdapterTests(unittest.TestCase):
         self.assertNotIn("SECRET-PROMPT-TEXT", json.dumps(adapter.calls))
 
     def test_invalid_configuration_is_rejected(self) -> None:
+        for extractor in (False, object()):
+            with self.subTest(extractor=extractor), self.assertRaises(ValueError):
+                self._adapter(answer_extractor=extractor)
         for name in ("timeout", "cost_per_1k_tokens"):
             for value in (float("nan"), float("inf"), float("-inf"), 10 ** 400):
                 with self.subTest(name=name, value=value), self.assertRaises(ValueError):

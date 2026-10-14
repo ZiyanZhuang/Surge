@@ -334,7 +334,9 @@ class HttpWorkerAdapter:
         self.cost_per_1k_tokens = _positive_number(
             cost_per_1k_tokens, "cost_per_1k_tokens", allow_zero=True
         )
-        self.answer_extractor = answer_extractor or default_answer_extractor
+        self.answer_extractor = default_answer_extractor if answer_extractor is None else answer_extractor
+        if not callable(self.answer_extractor):
+            raise ValueError("answer_extractor must be callable")
         self.api_key = api_key
         self.extra_headers = dict(extra_headers or {})
         self.warning = warning
