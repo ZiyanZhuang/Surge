@@ -80,7 +80,7 @@ def resolve_evidence(
 
 def _numbers(text: str) -> set[Decimal]:
     """保留符号并精确比较十进制与科学计数法，不引入浮点舍入。"""
-    return {Decimal(raw) for raw in _DIGITS.findall(text)}
+    return {Decimal(raw) for raw in _DIGITS.findall(text.replace("\u2212", "-"))}
 
 
 @dataclass(frozen=True)

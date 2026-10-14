@@ -152,6 +152,11 @@ class HttpAdapterTests(unittest.TestCase):
         result = HttpWorkerAdapter(self.url, "model").run(NodeSpec("n", "work"), {})
         self.assertEqual(result.envelope["answer"], "Evidence collected successfully.")
 
+    def test_numeric_answer_extraction_keeps_unicode_negative_signs(self) -> None:
+        for text in ("\u221242", "the result is \u221242", '{"answer":"\u221242"}', '{"answer":"\\u221242"}'):
+            with self.subTest(text=text):
+                self.assertEqual(extract_numeric_answer(text), "-42")
+
     def test_explicit_falsey_answer_extractor_is_not_replaced(self) -> None:
         class EmptyExtractor:
             called = False

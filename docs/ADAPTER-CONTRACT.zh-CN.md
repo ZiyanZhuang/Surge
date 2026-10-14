@@ -164,6 +164,8 @@ verdict JSON 超过解析深度/整数限制，或 score 超出 [0,1] 时，形�
 
 模型验证调用前先检查 worker 的 total_tokens/cost；缺失、负数、布尔、非数字或非有限值不得被验证费用相加“洗白”，也不得先追加一次有成本的验证调用。合并验证费用时同样校验两侧与合计值，不用零替换非法用量。
 
+确定性数值包含检查将数学负号 U+2212 与 ASCII 减号等价比较，保留正负含义；比较不改写 answer、claim 与 artifact 正文。专用数值提取器输出规范 ASCII 负号，通用 CLI 默认答案提取仍保留原始负号字符。
+
 ModelVerifier 从 node.max_tokens 中扣除已报告 worker tokens；不足 1 token 时以 `kind="budget"` 停止，验证请求 max_tokens 限于剩余整数额度及显式上限的较小值。输入 token 仍计入最终总 usage，合并后由调度器检查节点/运行预算。
 
 provenance 名称解析与调度器保持当前节点名称优先；依赖限定名称按完整 `node_id/name` 匹配，不以第一个 `/` 拆分，因此 node ID 或 artifact 名称含 `/` 时仍可重建引用。歧义引用仍报告问题。

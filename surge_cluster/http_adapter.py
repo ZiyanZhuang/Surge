@@ -66,8 +66,8 @@ def extract_numeric_answer(text: str) -> str | None:
     """先取 JSON ``answer`` 字段，再退回文本中最后一个数字。"""
     answer = extract_json_answer(text)
     if answer:
-        return answer
-    matches = _NUMBER_RE.findall(text)
+        return answer.replace("\u2212", "-")
+    matches = _NUMBER_RE.findall(text.replace("\u2212", "-"))
     return matches[-1] if matches else None
 
 

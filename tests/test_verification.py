@@ -190,6 +190,9 @@ class EvidenceVerifierTests(unittest.TestCase):
         for answer, evidence, expected in (
             ("42 and 99", "the value is 42", False),
             ("-42", "the value is 42", False),
+            ("\u221242", "the value is 42", False),
+            ("\u221242", "the value is -42", True),
+            ("-42", "the value is \u221242", True),
             ("1e3", "the value is 1000", True),
             ("93.50", "the value is 93.5", True),
             ("1e999999999999999999999999", "the value is 42", False),
